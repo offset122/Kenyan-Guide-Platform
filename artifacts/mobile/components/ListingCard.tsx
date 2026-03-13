@@ -1,10 +1,12 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Pressable } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Linking } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { Colors } from "@/constants/colors";
-import { Listing, CATEGORIES } from "@/constants/data";
+import { CATEGORIES } from "@/constants/data";
+import { Listing } from "@/context/AppContext";
+import { useAppContext } from "@/context/AppContext";
 import { StarRating } from "./ui/StarRating";
 import { Badge } from "./ui/Badge";
 
@@ -26,8 +28,9 @@ const BADGE_VARIANT_MAP: Record<string, "gold" | "red" | "green" | "blue" | "pur
 };
 
 export function ListingCard({ listing }: ListingCardProps) {
+  const { isSaved, toggleSaved, user } = useAppContext();
   const category = CATEGORIES.find((c) => c.id === listing.categoryId);
-  const initials = listing.title.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+  const saved = isSaved(listing.id);
 
   const handlePress = () => {
     Haptics.selectionAsync();
@@ -37,7 +40,14 @@ export function ListingCard({ listing }: ListingCardProps) {
   const handleCall = () => {
     if (listing.phone) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      Linking.openURL(`tel:${listing.phone.replace(/\s/g, "")}`);
     }
+  };
+
+  const handleSave = () => {
+    if (!user) { router.push("/auth/index"); return; }
+    Haptics.selectionAsync();
+    toggleSaved(listing.id);
   };
 
   const Icon = category?.iconSet === "MaterialIcons" ? MaterialIcons : Ionicons;
@@ -73,6 +83,11 @@ export function ListingCard({ listing }: ListingCardProps) {
             </View>
           </View>
         </View>
+
+        {/* Bookmark */}
+        <TouchableOpacity style={styles.bookmarkBtn} onPress={handleSave} hitSlop={8}>
+          <Ionicons name={saved ? "bookmark" : "bookmark-outline"} size={18} color={saved ? Colors.gold : Colors.textMuted} />
+        </TouchableOpacity>
       </View>
 
       {/* Footer */}
@@ -90,9 +105,9 @@ export function ListingCard({ listing }: ListingCardProps) {
             <Text style={styles.price}>{listing.price}</Text>
           )}
           {listing.phone && (
-            <Pressable style={styles.callBtn} onPress={handleCall}>
+            <TouchableOpacity style={styles.callBtn} onPress={handleCall}>
               <Ionicons name="call" size={16} color={Colors.gold} />
-            </Pressable>
+            </TouchableOpacity>
           )}
         </View>
       </View>
@@ -169,6 +184,9 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     fontSize: 11,
     color: Colors.textMuted,
+  },
+  bookmarkBtn: {
+    padding: 4,
   },
   footer: {
     flexDirection: "row",

@@ -11,9 +11,10 @@ const CARD_WIDTH = (width - 48) / 2;
 
 interface CategoryCardProps {
   category: Category;
+  count?: number;
 }
 
-export function CategoryCard({ category }: CategoryCardProps) {
+export function CategoryCard({ category, count }: CategoryCardProps) {
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -42,11 +43,13 @@ export function CategoryCard({ category }: CategoryCardProps) {
         </View>
         <Text style={styles.title} numberOfLines={1}>{category.title}</Text>
         <Text style={styles.subtitle} numberOfLines={2}>{category.subtitle}</Text>
-        <View style={[styles.countBadge, { backgroundColor: category.accentColor + "20" }]}>
-          <Text style={[styles.count, { color: category.accentColor }]}>
-            {category.count.toLocaleString()} listed
-          </Text>
-        </View>
+        {count != null && (
+          <View style={[styles.countBadge, { backgroundColor: category.accentColor + "20" }]}>
+            <Text style={[styles.count, { color: category.accentColor }]}>
+              {count} listed
+            </Text>
+          </View>
+        )}
       </TouchableOpacity>
     </Animated.View>
   );

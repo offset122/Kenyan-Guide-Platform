@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -8,36 +8,46 @@ import {
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useLocalSearchParams, router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 
 import { Colors } from "@/constants/colors";
-import { CATEGORIES, LISTINGS } from "@/constants/data";
+import { CATEGORIES, CATEGORY_TAGS } from "@/constants/data";
+import { useAppContext } from "@/context/AppContext";
 import { ListingCard } from "@/components/ListingCard";
-import { SearchBar } from "@/components/SearchBar";
 
 export default function CategoryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const isWeb = Platform.OS === "web";
   const topPadding = isWeb ? 67 : insets.top;
-  const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<"rating" | "price">("rating");
+  const { getListingsByCategory } = useAppContext();
+
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
   const category = CATEGORIES.find((c) => c.id === id);
-  const allListings = LISTINGS.filter((l) => l.categoryId === id);
-  const filtered = allListings.filter((l) =>
-    l.title.toLowerCase().includes(search.toLowerCase()) ||
-    l.subtitle.toLowerCase().includes(search.toLowerCase()) ||
-    l.tags.some((t) => t.toLowerCase().includes(search.toLowerCase()))
-  );
+  const allListings = useMemo(() => getListingsByCategory(id ?? ""), [id, getListingsByCategory]);
+  const tags = CATEGORY_TAGS[id ?? ""] ?? [];
 
-  const sorted = [...filtered].sort((a, b) => {
-    if (sortBy === "rating") return b.rating - a.rating;
-    return 0;
-  });
+  const filtered = useMemo(() => {
+    if (!selectedTag) return allListings;
+    return allListings.filter((l) => l.tags.includes(selectedTag));
+  }, [allListings, selectedTag]);
 
-  const Icon = category?.iconSet === "MaterialIcons" ? MaterialIcons : Ionicons;
+  if (!category) {
+    return (
+      <View style={[styles.container, { paddingTop: topPadding }]}>
+        <View style={styles.notFound}>
+          <Text style={styles.notFoundText}>Category not found</Text>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Text style={styles.backLink}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  const Icon = category.iconSet === "MaterialIcons" ? MaterialIcons : Ionicons;
 
   return (
     <View style={[styles.container, { paddingTop: topPadding }]}>
@@ -46,69 +56,69 @@ export default function CategoryScreen() {
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={22} color={Colors.textPrimary} />
         </TouchableOpacity>
-        <View style={styles.headerTitle}>
-          {category && (
-            <View style={[styles.headerIcon, { backgroundColor: category.color }]}>
-              {/* @ts-ignore */}
-              <Icon name={category.icon} size={18} color={category.accentColor} />
-            </View>
-          )}
-          <Text style={styles.title} numberOfLines={1}>{category?.title ?? "Category"}</Text>
+        <View style={[styles.headerIconWrap, { backgroundColor: category.color }]}>
+          {/* @ts-ignore */}
+          <Icon name={category.icon} size={20} color={category.accentColor} />
         </View>
-        <TouchableOpacity style={styles.filterBtn}>
-          <Ionicons name="options" size={20} color={Colors.gold} />
+        <View style={styles.headerText}>
+          <Text style={styles.headerTitle}>{category.title}</Text>
+          <Text style={styles.headerSubtitle}>{filtered.length} listing{filtered.length !== 1 ? "s" : ""}</Text>
+        </View>
+        <TouchableOpacity style={styles.searchBtn} onPress={() => router.push("/search")}>
+          <Ionicons name="search-outline" size={20} color={Colors.textPrimary} />
         </TouchableOpacity>
       </View>
 
-      {/* Subtitle */}
-      {category && (
-        <View style={styles.subtitleRow}>
-          <Text style={styles.subtitle}>{category.subtitle}</Text>
-          <Text style={styles.countText}>{sorted.length} results</Text>
-        </View>
+      {/* Description */}
+      <View style={styles.descBox}>
+        <Text style={styles.descText}>{category.description}</Text>
+      </View>
+
+      {/* Tag filter */}
+      {tags.length > 0 && (
+        <FlatList
+          horizontal
+          data={[null, ...tags]}
+          keyExtractor={(item) => item ?? "all"}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tagRow}
+          style={styles.tagScroll}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={[styles.tagChip, selectedTag === item && styles.tagChipActive]}
+              onPress={() => setSelectedTag(item)}
+            >
+              <Text style={[styles.tagText, selectedTag === item && styles.tagTextActive]}>
+                {item ?? "All"}
+              </Text>
+            </TouchableOpacity>
+          )}
+        />
       )}
 
-      {/* Search */}
-      <View style={styles.searchWrap}>
-        <SearchBar
-          onChangeText={setSearch}
-          value={search}
-          placeholder={`Search ${category?.title ?? "listings"}...`}
-        />
-      </View>
-
-      {/* Sort Row */}
-      <View style={styles.sortRow}>
-        <Text style={styles.sortLabel}>Sort by:</Text>
-        {(["rating", "price"] as const).map((s) => (
-          <TouchableOpacity
-            key={s}
-            style={[styles.sortChip, sortBy === s && styles.sortChipActive]}
-            onPress={() => setSortBy(s)}
-          >
-            <Text style={[styles.sortChipText, sortBy === s && styles.sortChipTextActive]}>
-              {s.charAt(0).toUpperCase() + s.slice(1)}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* List */}
+      {/* Listings */}
       <FlatList
-        data={sorted}
+        data={filtered}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => <ListingCard listing={item} />}
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingBottom: isWeb ? 120 : 100 },
-        ]}
+        contentContainerStyle={[styles.listContent, { paddingBottom: isWeb ? 120 : 90 }]}
         ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
         showsVerticalScrollIndicator={false}
+        contentInsetAdjustmentBehavior="automatic"
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Ionicons name="search-outline" size={40} color={Colors.textMuted} />
-            <Text style={styles.emptyTitle}>No listings found</Text>
-            <Text style={styles.emptyText}>Try a different search term</Text>
+            <View style={[styles.emptyIcon, { backgroundColor: category.color }]}>
+              {/* @ts-ignore */}
+              <Icon name={category.icon} size={32} color={category.accentColor} />
+            </View>
+            <Text style={styles.emptyTitle}>No listings yet</Text>
+            <Text style={styles.emptyText}>
+              Be the first to post in {category.title}!
+            </Text>
+            <TouchableOpacity style={styles.postBtn} onPress={() => router.push("/(tabs)/create" as any)}>
+              <Ionicons name="add" size={16} color={Colors.darkBg} />
+              <Text style={styles.postBtnText}>Post a Listing</Text>
+            </TouchableOpacity>
           </View>
         }
       />
@@ -117,126 +127,30 @@ export default function CategoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.darkBg,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 12,
-  },
-  backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: Colors.darkCard,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  headerIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 20,
-    color: Colors.textPrimary,
-    letterSpacing: -0.4,
-    flex: 1,
-  },
-  filterBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: "rgba(201,168,76,0.15)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  subtitleRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    marginBottom: 12,
-  },
-  subtitle: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    color: Colors.textMuted,
-    flex: 1,
-  },
-  countText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 13,
-    color: Colors.gold,
-  },
-  searchWrap: {
-    paddingHorizontal: 16,
-    marginBottom: 12,
-  },
-  sortRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 16,
-    marginBottom: 14,
-  },
-  sortLabel: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    color: Colors.textMuted,
-  },
-  sortChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: Colors.darkCard,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  sortChipActive: {
-    backgroundColor: Colors.gold + "20",
-    borderColor: Colors.gold + "50",
-  },
-  sortChipText: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 13,
-    color: Colors.textMuted,
-  },
-  sortChipTextActive: {
-    color: Colors.gold,
-  },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingTop: 4,
-  },
-  empty: {
-    alignItems: "center",
-    paddingVertical: 60,
-    gap: 10,
-  },
-  emptyTitle: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 16,
-    color: Colors.textPrimary,
-  },
-  emptyText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    color: Colors.textMuted,
-  },
+  container: { flex: 1, backgroundColor: Colors.darkBg },
+  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, gap: 12 },
+  backBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: Colors.darkCard, borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center" },
+  headerIconWrap: { width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  headerText: { flex: 1 },
+  headerTitle: { fontFamily: "Inter_700Bold", fontSize: 17, color: Colors.textPrimary },
+  headerSubtitle: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted, marginTop: 1 },
+  searchBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: Colors.darkCard, borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center" },
+  descBox: { marginHorizontal: 16, backgroundColor: Colors.darkCard, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, padding: 12, marginBottom: 12 },
+  descText: { fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.textSecondary, lineHeight: 19 },
+  tagScroll: { maxHeight: 50 },
+  tagRow: { paddingHorizontal: 16, gap: 8, paddingBottom: 12 },
+  tagChip: { backgroundColor: Colors.darkCard, borderWidth: 1, borderColor: Colors.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 },
+  tagChipActive: { backgroundColor: Colors.green + "40", borderColor: Colors.gold + "60" },
+  tagText: { fontFamily: "Inter_500Medium", fontSize: 13, color: Colors.textMuted },
+  tagTextActive: { color: Colors.gold },
+  listContent: { paddingHorizontal: 16, paddingTop: 4 },
+  empty: { alignItems: "center", paddingVertical: 60, gap: 14, paddingHorizontal: 32 },
+  emptyIcon: { width: 72, height: 72, borderRadius: 22, alignItems: "center", justifyContent: "center" },
+  emptyTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: Colors.textPrimary },
+  emptyText: { fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.textMuted, textAlign: "center" },
+  postBtn: { backgroundColor: Colors.gold, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 24, flexDirection: "row", gap: 8, alignItems: "center", marginTop: 4 },
+  postBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.darkBg },
+  notFound: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
+  notFoundText: { fontFamily: "Inter_600SemiBold", fontSize: 18, color: Colors.textPrimary },
+  backLink: { fontFamily: "Inter_500Medium", fontSize: 15, color: Colors.gold },
 });

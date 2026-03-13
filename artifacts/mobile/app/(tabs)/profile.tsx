@@ -7,59 +7,55 @@ import {
   TouchableOpacity,
   Platform,
   Switch,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 
 import { Colors } from "@/constants/colors";
-
-interface MenuItem {
-  id: string;
-  icon: string;
-  label: string;
-  sublabel?: string;
-  hasChevron?: boolean;
-  toggle?: boolean;
-}
-
-const MENU_SECTIONS: { title: string; items: MenuItem[] }[] = [
-  {
-    title: "Account",
-    items: [
-      { id: "listing", icon: "storefront-outline", label: "My Listings", sublabel: "Manage your listings", hasChevron: true },
-      { id: "applications", icon: "document-text-outline", label: "Job Applications", sublabel: "Track your applications", hasChevron: true },
-      { id: "reviews", icon: "star-outline", label: "Reviews", sublabel: "Your ratings & reviews", hasChevron: true },
-    ],
-  },
-  {
-    title: "Settings",
-    items: [
-      { id: "notifications", icon: "notifications-outline", label: "Notifications", toggle: true },
-      { id: "location", icon: "location-outline", label: "Location Services", toggle: true },
-      { id: "language", icon: "language-outline", label: "Language", sublabel: "English", hasChevron: true },
-    ],
-  },
-  {
-    title: "Support",
-    items: [
-      { id: "help", icon: "help-circle-outline", label: "Help Center", hasChevron: true },
-      { id: "terms", icon: "document-outline", label: "Terms & Privacy", hasChevron: true },
-      { id: "about", icon: "information-circle-outline", label: "About My Kenyan Guide", hasChevron: true },
-    ],
-  },
-];
+import { useAppContext } from "@/context/AppContext";
+import { ACCOUNT_TYPES } from "@/constants/data";
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const isWeb = Platform.OS === "web";
   const topPadding = isWeb ? 67 : insets.top;
+  const { user, logout, getMyListings, getSavedListings } = useAppContext();
   const [notificationsOn, setNotificationsOn] = useState(true);
   const [locationOn, setLocationOn] = useState(false);
 
-  const toggleMap: Record<string, [boolean, (v: boolean) => void]> = {
-    notifications: [notificationsOn, setNotificationsOn],
-    location: [locationOn, setLocationOn],
+  const myListings = getMyListings();
+  const savedListings = getSavedListings();
+
+  const accountTypeLabel = ACCOUNT_TYPES.find((t) => t.id === user?.accountType)?.label ?? "Customer";
+
+  const handleLogout = () => {
+    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Sign Out", style: "destructive", onPress: () => { logout(); } },
+    ]);
   };
+
+  if (!user) {
+    return (
+      <View style={[styles.container, { paddingTop: topPadding }]}>
+        <View style={styles.guestWrap}>
+          <View style={styles.guestAvatar}>
+            <Ionicons name="person" size={40} color={Colors.gold} />
+          </View>
+          <Text style={styles.guestTitle}>Join My Kenyan Guide</Text>
+          <Text style={styles.guestText}>Create an account to post listings, save favourites, and access all features</Text>
+          <TouchableOpacity style={styles.signInBtn} onPress={() => router.push("/auth/index")}>
+            <Text style={styles.signInBtnText}>Sign In</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.registerBtn} onPress={() => router.push("/auth/signup")}>
+            <Text style={styles.registerBtnText}>Create Account</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <ScrollView
@@ -73,278 +69,187 @@ export default function ProfileScreen() {
     >
       {/* Profile Card */}
       <View style={styles.profileCard}>
-        <View style={styles.avatarWrap}>
+        <View style={styles.avatarRow}>
           <View style={styles.avatar}>
-            <Ionicons name="person" size={36} color={Colors.gold} />
+            <Text style={styles.avatarInitials}>
+              {user.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+            </Text>
           </View>
-          <TouchableOpacity style={styles.editAvatarBtn}>
-            <Ionicons name="camera" size={14} color={Colors.darkBg} />
+          <View style={styles.profileInfo}>
+            <Text style={styles.profileName}>{user.name}</Text>
+            <View style={styles.accountTypeBadge}>
+              <Ionicons name="shield-checkmark" size={12} color={Colors.gold} />
+              <Text style={styles.accountTypeText}>{accountTypeLabel}</Text>
+            </View>
+            <Text style={styles.profileEmail}>{user.email}</Text>
+            {user.location && (
+              <View style={styles.locationRow}>
+                <Ionicons name="location-outline" size={12} color={Colors.textMuted} />
+                <Text style={styles.profileLocation}>{user.location}</Text>
+              </View>
+            )}
+          </View>
+          <TouchableOpacity style={styles.editBtn} onPress={() => router.push("/edit-profile")}>
+            <Ionicons name="pencil-outline" size={18} color={Colors.gold} />
           </TouchableOpacity>
         </View>
-        <View style={styles.profileInfo}>
-          <Text style={styles.profileName}>Guest User</Text>
-          <Text style={styles.profileEmail}>Sign in to access all features</Text>
-        </View>
-        <TouchableOpacity style={styles.signInBtn}>
-          <Text style={styles.signInBtnText}>Sign In</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Stats Row */}
-      <View style={styles.statsRow}>
-        {[
-          { label: "Listings", value: "0" },
-          { label: "Saved", value: "5" },
-          { label: "Reviews", value: "0" },
-        ].map((s, i) => (
-          <React.Fragment key={s.label}>
-            {i > 0 && <View style={styles.statsDivider} />}
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{s.value}</Text>
-              <Text style={styles.statLabel}>{s.label}</Text>
-            </View>
-          </React.Fragment>
-        ))}
-      </View>
-
-      {/* List a Service Banner */}
-      <TouchableOpacity style={styles.listBanner}>
-        <View>
-          <Text style={styles.listBannerTitle}>List Your Service</Text>
-          <Text style={styles.listBannerSub}>Join 4,820+ providers on the platform</Text>
-        </View>
-        <View style={styles.listBannerIcon}>
-          <Ionicons name="add" size={24} color={Colors.darkBg} />
-        </View>
-      </TouchableOpacity>
-
-      {/* Menu Sections */}
-      {MENU_SECTIONS.map((section) => (
-        <View key={section.title} style={styles.menuSection}>
-          <Text style={styles.menuSectionTitle}>{section.title}</Text>
-          <View style={styles.menuCard}>
-            {section.items.map((item, idx) => {
-              const toggleEntry = item.toggle ? toggleMap[item.id] : null;
-              return (
-                <React.Fragment key={item.id}>
-                  {idx > 0 && <View style={styles.menuDivider} />}
-                  <TouchableOpacity style={styles.menuItem} disabled={!!item.toggle}>
-                    <View style={styles.menuIconWrap}>
-                      <Ionicons name={item.icon as any} size={20} color={Colors.gold} />
-                    </View>
-                    <View style={styles.menuLabel}>
-                      <Text style={styles.menuLabelText}>{item.label}</Text>
-                      {item.sublabel && (
-                        <Text style={styles.menuSublabel}>{item.sublabel}</Text>
-                      )}
-                    </View>
-                    {item.hasChevron && (
-                      <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
-                    )}
-                    {item.toggle && toggleEntry && (
-                      <Switch
-                        value={toggleEntry[0]}
-                        onValueChange={toggleEntry[1]}
-                        trackColor={{ false: Colors.darkCardElevated, true: Colors.green }}
-                        thumbColor={toggleEntry[0] ? Colors.gold : Colors.textMuted}
-                      />
-                    )}
-                  </TouchableOpacity>
-                </React.Fragment>
-              );
-            })}
+        {user.bio ? (
+          <Text style={styles.profileBio}>{user.bio}</Text>
+        ) : null}
+        <View style={styles.profileStats}>
+          <TouchableOpacity style={styles.statItem} onPress={() => router.push("/my-listings")}>
+            <Text style={styles.statValue}>{myListings.length}</Text>
+            <Text style={styles.statLabel}>Listings</Text>
+          </TouchableOpacity>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{savedListings.length}</Text>
+            <Text style={styles.statLabel}>Saved</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{user.phone ? "Yes" : "No"}</Text>
+            <Text style={styles.statLabel}>Verified</Text>
           </View>
         </View>
-      ))}
+      </View>
+
+      {/* Quick Actions */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <View style={styles.actionGrid}>
+          <TouchableOpacity style={styles.actionCard} onPress={() => router.push("/(tabs)/create" as any)}>
+            <View style={[styles.actionIcon, { backgroundColor: Colors.green }]}>
+              <Ionicons name="add" size={22} color={Colors.gold} />
+            </View>
+            <Text style={styles.actionLabel}>Post Listing</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionCard} onPress={() => router.push("/my-listings")}>
+            <View style={[styles.actionIcon, { backgroundColor: "#1A3A5C" }]}>
+              <Ionicons name="list" size={22} color="#6CA8E8" />
+            </View>
+            <Text style={styles.actionLabel}>My Listings</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionCard} onPress={() => router.push("/(tabs)/saved" as any)}>
+            <View style={[styles.actionIcon, { backgroundColor: "#3A1A5C" }]}>
+              <Ionicons name="bookmark" size={22} color="#A87AE8" />
+            </View>
+            <Text style={styles.actionLabel}>Saved</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionCard} onPress={() => router.push("/edit-profile")}>
+            <View style={[styles.actionIcon, { backgroundColor: "#3A5C1A" }]}>
+              <Ionicons name="settings" size={22} color="#88C84C" />
+            </View>
+            <Text style={styles.actionLabel}>Settings</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Settings */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Preferences</Text>
+        <View style={styles.menuCard}>
+          <View style={styles.menuItem}>
+            <View style={styles.menuIconWrap}>
+              <Ionicons name="notifications-outline" size={18} color={Colors.gold} />
+            </View>
+            <Text style={styles.menuLabel}>Push Notifications</Text>
+            <Switch
+              value={notificationsOn}
+              onValueChange={setNotificationsOn}
+              trackColor={{ false: Colors.darkCardElevated, true: Colors.green }}
+              thumbColor={notificationsOn ? Colors.gold : Colors.textMuted}
+            />
+          </View>
+          <View style={styles.menuDivider} />
+          <View style={styles.menuItem}>
+            <View style={styles.menuIconWrap}>
+              <Ionicons name="location-outline" size={18} color={Colors.gold} />
+            </View>
+            <Text style={styles.menuLabel}>Location Services</Text>
+            <Switch
+              value={locationOn}
+              onValueChange={setLocationOn}
+              trackColor={{ false: Colors.darkCardElevated, true: Colors.green }}
+              thumbColor={locationOn ? Colors.gold : Colors.textMuted}
+            />
+          </View>
+        </View>
+      </View>
+
+      {/* Support */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Support</Text>
+        <View style={styles.menuCard}>
+          {[
+            { icon: "help-circle-outline", label: "Help Center" },
+            { icon: "shield-outline", label: "Trust & Safety" },
+            { icon: "document-outline", label: "Terms & Privacy" },
+            { icon: "information-circle-outline", label: "About My Kenyan Guide v1.0" },
+          ].map((item, idx, arr) => (
+            <React.Fragment key={item.label}>
+              <TouchableOpacity style={styles.menuItem}>
+                <View style={styles.menuIconWrap}>
+                  <Ionicons name={item.icon as any} size={18} color={Colors.gold} />
+                </View>
+                <Text style={styles.menuLabel}>{item.label}</Text>
+                <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
+              </TouchableOpacity>
+              {idx < arr.length - 1 && <View style={styles.menuDivider} />}
+            </React.Fragment>
+          ))}
+        </View>
+      </View>
 
       {/* Sign Out */}
-      <TouchableOpacity style={styles.signOutBtn}>
+      <TouchableOpacity style={styles.signOutBtn} onPress={handleLogout}>
         <Ionicons name="log-out-outline" size={18} color="#E85C5C" />
         <Text style={styles.signOutText}>Sign Out</Text>
       </TouchableOpacity>
-
-      <Text style={styles.version}>My Kenyan Guide v1.0.0</Text>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.darkBg },
-  content: { paddingHorizontal: 16, gap: 16 },
-  profileCard: {
-    backgroundColor: Colors.darkCard,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    padding: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-  },
-  avatarWrap: { position: "relative" },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: Colors.green,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: Colors.gold,
-  },
-  editAvatarBtn: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: Colors.gold,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  profileInfo: { flex: 1 },
-  profileName: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 17,
-    color: Colors.textPrimary,
-  },
-  profileEmail: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    color: Colors.textMuted,
-    marginTop: 2,
-  },
-  signInBtn: {
-    backgroundColor: Colors.gold,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 10,
-  },
-  signInBtnText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 13,
-    color: Colors.darkBg,
-  },
-  statsRow: {
-    backgroundColor: Colors.darkCard,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    paddingVertical: 16,
-    flexDirection: "row",
-    justifyContent: "space-around",
-  },
-  statsDivider: { width: 1, backgroundColor: Colors.border },
+  content: { paddingHorizontal: 16, gap: 20 },
+  guestWrap: { flex: 1, alignItems: "center", justifyContent: "center", gap: 14, paddingHorizontal: 32 },
+  guestAvatar: { width: 88, height: 88, borderRadius: 28, backgroundColor: Colors.green, borderWidth: 1, borderColor: Colors.gold + "40", alignItems: "center", justifyContent: "center" },
+  guestTitle: { fontFamily: "Inter_700Bold", fontSize: 22, color: Colors.textPrimary, textAlign: "center" },
+  guestText: { fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.textMuted, textAlign: "center" },
+  signInBtn: { backgroundColor: Colors.gold, borderRadius: 14, paddingVertical: 14, width: "100%", alignItems: "center" },
+  signInBtnText: { fontFamily: "Inter_700Bold", fontSize: 15, color: Colors.darkBg },
+  registerBtn: { borderWidth: 1, borderColor: Colors.border, borderRadius: 14, paddingVertical: 14, width: "100%", alignItems: "center" },
+  registerBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: Colors.textPrimary },
+  profileCard: { backgroundColor: Colors.darkCard, borderRadius: 20, borderWidth: 1, borderColor: Colors.border, padding: 18, gap: 14 },
+  avatarRow: { flexDirection: "row", gap: 14, alignItems: "flex-start" },
+  avatar: { width: 60, height: 60, borderRadius: 20, backgroundColor: Colors.green, borderWidth: 2, borderColor: Colors.gold, alignItems: "center", justifyContent: "center" },
+  avatarInitials: { fontFamily: "Inter_700Bold", fontSize: 22, color: Colors.gold },
+  profileInfo: { flex: 1, gap: 4 },
+  profileName: { fontFamily: "Inter_700Bold", fontSize: 18, color: Colors.textPrimary },
+  accountTypeBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: Colors.gold + "20", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, alignSelf: "flex-start" },
+  accountTypeText: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: Colors.gold },
+  profileEmail: { fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.textMuted },
+  locationRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  profileLocation: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted },
+  editBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.green + "40", borderWidth: 1, borderColor: Colors.gold + "30", alignItems: "center", justifyContent: "center" },
+  profileBio: { fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.textSecondary, lineHeight: 20, paddingTop: 4, borderTopWidth: 1, borderTopColor: Colors.borderLight },
+  profileStats: { flexDirection: "row", justifyContent: "space-around", borderTopWidth: 1, borderTopColor: Colors.borderLight, paddingTop: 14 },
   statItem: { alignItems: "center", gap: 4, flex: 1 },
-  statValue: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 22,
-    color: Colors.textPrimary,
-  },
-  statLabel: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    color: Colors.textMuted,
-  },
-  listBanner: {
-    backgroundColor: Colors.green,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors.gold + "40",
-    padding: 18,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  listBannerTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 16,
-    color: Colors.textPrimary,
-  },
-  listBannerSub: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  listBannerIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: Colors.gold,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  menuSection: { gap: 10 },
-  menuSectionTitle: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 13,
-    color: Colors.textMuted,
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
-    paddingHorizontal: 4,
-  },
-  menuCard: {
-    backgroundColor: Colors.darkCard,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    overflow: "hidden",
-  },
-  menuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 12,
-  },
-  menuIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: Colors.green + "40",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  menuLabel: { flex: 1 },
-  menuLabelText: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 15,
-    color: Colors.textPrimary,
-  },
-  menuSublabel: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    color: Colors.textMuted,
-    marginTop: 1,
-  },
-  menuDivider: {
-    height: 1,
-    backgroundColor: Colors.borderLight,
-    marginLeft: 64,
-  },
-  signOutBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: "rgba(187,25,25,0.1)",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "rgba(187,25,25,0.2)",
-    paddingVertical: 14,
-  },
-  signOutText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 15,
-    color: "#E85C5C",
-  },
-  version: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    color: Colors.textMuted,
-    textAlign: "center",
-    paddingBottom: 8,
-  },
+  statValue: { fontFamily: "Inter_700Bold", fontSize: 20, color: Colors.textPrimary },
+  statLabel: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted },
+  statDivider: { width: 1, backgroundColor: Colors.border },
+  section: { gap: 10 },
+  sectionTitle: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.textMuted, textTransform: "uppercase", letterSpacing: 0.8 },
+  actionGrid: { flexDirection: "row", gap: 10 },
+  actionCard: { flex: 1, backgroundColor: Colors.darkCard, borderWidth: 1, borderColor: Colors.border, borderRadius: 14, padding: 14, alignItems: "center", gap: 8 },
+  actionIcon: { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  actionLabel: { fontFamily: "Inter_500Medium", fontSize: 12, color: Colors.textSecondary, textAlign: "center" },
+  menuCard: { backgroundColor: Colors.darkCard, borderRadius: 16, borderWidth: 1, borderColor: Colors.border, overflow: "hidden" },
+  menuItem: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
+  menuIconWrap: { width: 34, height: 34, borderRadius: 10, backgroundColor: Colors.green + "40", alignItems: "center", justifyContent: "center" },
+  menuLabel: { flex: 1, fontFamily: "Inter_500Medium", fontSize: 15, color: Colors.textPrimary },
+  menuDivider: { height: 1, backgroundColor: Colors.borderLight, marginLeft: 62 },
+  signOutBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "rgba(187,25,25,0.1)", borderRadius: 14, borderWidth: 1, borderColor: "rgba(187,25,25,0.2)", paddingVertical: 14 },
+  signOutText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#E85C5C" },
 });

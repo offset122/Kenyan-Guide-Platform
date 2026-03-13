@@ -3,7 +3,7 @@ import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs } from "expo-router";
 import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
 import { SymbolView } from "expo-symbols";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Platform, StyleSheet, View, useColorScheme } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -21,6 +21,10 @@ function NativeTabLayout() {
         <Icon sf={{ default: "square.grid.2x2", selected: "square.grid.2x2.fill" }} />
         <Label>Explore</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="create">
+        <Icon sf={{ default: "plus.circle.fill", selected: "plus.circle.fill" }} />
+        <Label>Post</Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="saved">
         <Icon sf={{ default: "bookmark", selected: "bookmark.fill" }} />
         <Label>Saved</Label>
@@ -34,7 +38,6 @@ function NativeTabLayout() {
 }
 
 function ClassicTabLayout() {
-  const colorScheme = useColorScheme();
   const isDark = true;
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
@@ -57,15 +60,9 @@ function ClassicTabLayout() {
         },
         tabBarBackground: () =>
           isIOS ? (
-            <BlurView
-              intensity={80}
-              tint="dark"
-              style={StyleSheet.absoluteFill}
-            />
+            <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
           ) : (
-            <View
-              style={[StyleSheet.absoluteFill, { backgroundColor: Colors.darkCard }]}
-            />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: Colors.darkCard }]} />
           ),
       }}
     >
@@ -74,11 +71,7 @@ function ClassicTabLayout() {
         options={{
           title: "Home",
           tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="house.fill" tintColor={color} size={22} />
-            ) : (
-              <Ionicons name="home" size={22} color={color} />
-            ),
+            isIOS ? <SymbolView name="house.fill" tintColor={color} size={22} /> : <Ionicons name="home" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -86,11 +79,15 @@ function ClassicTabLayout() {
         options={{
           title: "Explore",
           tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="square.grid.2x2.fill" tintColor={color} size={22} />
-            ) : (
-              <Ionicons name="grid" size={22} color={color} />
-            ),
+            isIOS ? <SymbolView name="square.grid.2x2.fill" tintColor={color} size={22} /> : <Ionicons name="grid" size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="create"
+        options={{
+          title: "Post",
+          tabBarIcon: ({ color }) =>
+            isIOS ? <SymbolView name="plus.circle.fill" tintColor={color} size={26} /> : <Ionicons name="add-circle" size={28} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -98,11 +95,7 @@ function ClassicTabLayout() {
         options={{
           title: "Saved",
           tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="bookmark.fill" tintColor={color} size={22} />
-            ) : (
-              <Ionicons name="bookmark" size={22} color={color} />
-            ),
+            isIOS ? <SymbolView name="bookmark.fill" tintColor={color} size={22} /> : <Ionicons name="bookmark" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -110,11 +103,7 @@ function ClassicTabLayout() {
         options={{
           title: "Profile",
           tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="person.fill" tintColor={color} size={22} />
-            ) : (
-              <Ionicons name="person" size={22} color={color} />
-            ),
+            isIOS ? <SymbolView name="person.fill" tintColor={color} size={22} /> : <Ionicons name="person" size={22} color={color} />,
         }}
       />
     </Tabs>

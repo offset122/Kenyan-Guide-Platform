@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -6,309 +6,198 @@ import {
   ScrollView,
   TouchableOpacity,
   Platform,
-  Dimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
 
 import { Colors } from "@/constants/colors";
-import { CATEGORIES, LISTINGS } from "@/constants/data";
-import { CategoryCard } from "@/components/CategoryCard";
+import { CATEGORIES } from "@/constants/data";
+import { useAppContext } from "@/context/AppContext";
 import { ListingCard } from "@/components/ListingCard";
-import { SearchBar } from "@/components/SearchBar";
-
-const { width } = Dimensions.get("window");
-
-const POPULAR_SEARCHES = ["Plumber", "Apartments", "Driver Jobs", "Electrician", "Land Sale"];
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const isWeb = Platform.OS === "web";
+  const topPadding = isWeb ? 67 : insets.top;
+  const { listings, user } = useAppContext();
 
-  const topPadding = isWeb ? 67 : insets.top + 8;
-  const bottomPadding = isWeb ? 34 : 0;
-
-  const featuredListings = LISTINGS.filter((l) => l.badge === "Featured" || l.badge === "Top Rated").slice(0, 4);
+  const featured = useMemo(() =>
+    listings.filter((l) => l.available && l.rating >= 4.7).slice(0, 6),
+    [listings]
+  );
+  const recent = useMemo(() =>
+    [...listings].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 8),
+    [listings]
+  );
 
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: topPadding + 20, paddingBottom: bottomPadding + 100 },
-      ]}
+      contentContainerStyle={[styles.content, { paddingTop: topPadding, paddingBottom: isWeb ? 120 : 100 }]}
       showsVerticalScrollIndicator={false}
       contentInsetAdjustmentBehavior="automatic"
     >
       {/* Header */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Good day</Text>
-          <Text style={styles.tagline}>Find what Kenya offers</Text>
+        <View style={styles.headerLeft}>
+          <Text style={styles.greeting}>{user ? `Hello, ${user.name.split(" ")[0]} 👋` : "My Kenyan Guide"}</Text>
+          <Text style={styles.tagline}>Discover services across Kenya</Text>
         </View>
-        <TouchableOpacity style={styles.notifBtn}>
-          <Ionicons name="notifications-outline" size={22} color={Colors.textPrimary} />
-          <View style={styles.notifDot} />
+        <TouchableOpacity
+          style={styles.profileBtn}
+          onPress={() => user ? router.push("/(tabs)/profile" as any) : router.push("/auth/index")}
+        >
+          {user ? (
+            <Text style={styles.profileInitials}>
+              {user.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+            </Text>
+          ) : (
+            <Ionicons name="person-outline" size={20} color={Colors.gold} />
+          )}
         </TouchableOpacity>
       </View>
 
       {/* Search */}
-      <View style={styles.section}>
-        <SearchBar onPress={() => router.push("/search")} />
-      </View>
+      <TouchableOpacity style={styles.searchTouchable} onPress={() => router.push("/search")} activeOpacity={0.85}>
+        <View style={styles.searchBarFake}>
+          <Ionicons name="search-outline" size={18} color={Colors.textMuted} />
+          <Text style={styles.searchPlaceholder}>Search services, businesses, jobs...</Text>
+          <Ionicons name="options-outline" size={18} color={Colors.textMuted} />
+        </View>
+      </TouchableOpacity>
 
-      {/* Popular searches */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillScroll} contentContainerStyle={styles.pillContent}>
-        {POPULAR_SEARCHES.map((term) => (
-          <TouchableOpacity key={term} style={styles.pill} onPress={() => router.push("/search")}>
-            <Text style={styles.pillText}>{term}</Text>
-          </TouchableOpacity>
+      {/* Stats Row */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.statsScroll} contentContainerStyle={styles.statsRow}>
+        {[
+          { label: "Listings", value: listings.length, icon: "storefront-outline" },
+          { label: "Categories", value: CATEGORIES.length, icon: "grid-outline" },
+          { label: "Counties", value: "47", icon: "map-outline" },
+          { label: "Free", value: "100%", icon: "checkmark-circle-outline" },
+        ].map((s) => (
+          <View key={s.label} style={styles.statChip}>
+            <Ionicons name={s.icon as any} size={14} color={Colors.gold} />
+            <Text style={styles.statChipValue}>{s.value}</Text>
+            <Text style={styles.statChipLabel}>{s.label}</Text>
+          </View>
         ))}
       </ScrollView>
-
-      {/* Hero Banner */}
-      <View style={styles.heroWrap}>
-        <LinearGradient
-          colors={[Colors.green, Colors.greenDark]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.hero}
-        >
-          <View style={styles.heroContent}>
-            <View style={styles.heroBadge}>
-              <Text style={styles.heroBadgeText}>TRUSTED PLATFORM</Text>
-            </View>
-            <Text style={styles.heroTitle}>Everything Kenya Needs.</Text>
-            <Text style={styles.heroTitle}>In One Place.</Text>
-            <Text style={styles.heroSub}>4,820+ verified providers · 6 categories</Text>
-          </View>
-          <View style={styles.heroAccent}>
-            <Ionicons name="shield-checkmark" size={64} color={Colors.gold + "40"} />
-          </View>
-        </LinearGradient>
-      </View>
 
       {/* Categories */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Explore Categories</Text>
-          <TouchableOpacity onPress={() => router.push("/explore" as any)}>
-            <Text style={styles.seeAll}>See All</Text>
+          <Text style={styles.sectionTitle}>Categories</Text>
+          <TouchableOpacity onPress={() => router.push("/(tabs)/explore" as any)}>
+            <Text style={styles.seeAll}>See all</Text>
           </TouchableOpacity>
         </View>
-        <View style={styles.categoryGrid}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesRow}>
           {CATEGORIES.map((cat) => (
-            <CategoryCard key={cat.id} category={cat} />
+            <TouchableOpacity
+              key={cat.id}
+              style={styles.categoryChip}
+              onPress={() => router.push({ pathname: "/category/[id]", params: { id: cat.id } })}
+            >
+              <View style={[styles.categoryChipIcon, { backgroundColor: cat.color }]}>
+                {cat.iconSet === "MaterialIcons" ? (
+                  /* @ts-ignore */
+                  <MaterialIcons name={cat.icon} size={18} color={cat.accentColor} />
+                ) : (
+                  <Ionicons name={cat.icon as any} size={18} color={cat.accentColor} />
+                )}
+              </View>
+              <Text style={styles.categoryChipText}>{cat.title}</Text>
+            </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
       </View>
 
-      {/* Featured Listings */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Featured Listings</Text>
+      {/* Featured */}
+      {featured.length > 0 && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Top Rated</Text>
+            <TouchableOpacity onPress={() => router.push("/(tabs)/explore" as any)}>
+              <Text style={styles.seeAll}>See all</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.listingsCol}>
+            {featured.map((listing) => (
+              <ListingCard key={listing.id} listing={listing} />
+            ))}
+          </View>
         </View>
-        <View style={styles.listingList}>
-          {featuredListings.map((listing) => (
-            <ListingCard key={listing.id} listing={listing} />
-          ))}
-        </View>
-      </View>
+      )}
 
-      {/* Trust Banner */}
-      <View style={styles.trustBanner}>
-        <View style={styles.trustItem}>
-          <Ionicons name="shield-checkmark" size={22} color={Colors.gold} />
-          <Text style={styles.trustLabel}>Verified</Text>
+      {/* Recent */}
+      {recent.length > 0 && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Recently Added</Text>
+          </View>
+          <View style={styles.listingsCol}>
+            {recent.map((listing) => (
+              <ListingCard key={listing.id} listing={listing} />
+            ))}
+          </View>
         </View>
-        <View style={styles.trustDivider} />
-        <View style={styles.trustItem}>
-          <Ionicons name="star" size={22} color={Colors.gold} />
-          <Text style={styles.trustLabel}>Rated</Text>
+      )}
+
+      {/* CTA */}
+      {!user && (
+        <View style={styles.ctaBanner}>
+          <Ionicons name="shield-checkmark" size={32} color={Colors.gold} />
+          <Text style={styles.ctaTitle}>Reach More Customers</Text>
+          <Text style={styles.ctaText}>Post a free listing and connect with thousands across Kenya</Text>
+          <TouchableOpacity style={styles.ctaBtn} onPress={() => router.push("/auth/signup")}>
+            <Text style={styles.ctaBtnText}>Get Started Free</Text>
+          </TouchableOpacity>
         </View>
-        <View style={styles.trustDivider} />
-        <View style={styles.trustItem}>
-          <Ionicons name="location" size={22} color={Colors.gold} />
-          <Text style={styles.trustLabel}>Local</Text>
-        </View>
-      </View>
+      )}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.darkBg,
+  container: { flex: 1, backgroundColor: Colors.darkBg },
+  content: { paddingHorizontal: 16 },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 20, paddingBottom: 16 },
+  headerLeft: { gap: 2 },
+  greeting: { fontFamily: "Inter_700Bold", fontSize: 22, color: Colors.textPrimary, letterSpacing: -0.4 },
+  tagline: { fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.textMuted },
+  profileBtn: { width: 44, height: 44, borderRadius: 14, backgroundColor: Colors.green, borderWidth: 1.5, borderColor: Colors.gold, alignItems: "center", justifyContent: "center" },
+  profileInitials: { fontFamily: "Inter_700Bold", fontSize: 15, color: Colors.gold },
+  searchTouchable: { marginBottom: 16 },
+  searchBarFake: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    backgroundColor: Colors.darkCard, borderWidth: 1, borderColor: Colors.border,
+    borderRadius: 14, paddingHorizontal: 14, paddingVertical: 14,
   },
-  content: {
-    paddingHorizontal: 16,
-    gap: 0,
+  searchPlaceholder: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.textMuted },
+  statsScroll: { marginBottom: 20 },
+  statsRow: { gap: 10 },
+  statChip: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    backgroundColor: Colors.darkCard, borderWidth: 1, borderColor: Colors.border,
+    borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7,
   },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 20,
+  statChipValue: { fontFamily: "Inter_700Bold", fontSize: 13, color: Colors.textPrimary },
+  statChipLabel: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted },
+  section: { marginBottom: 24 },
+  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+  sectionTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: Colors.textPrimary },
+  seeAll: { fontFamily: "Inter_500Medium", fontSize: 13, color: Colors.gold },
+  categoriesRow: { gap: 12 },
+  categoryChip: { alignItems: "center", gap: 8 },
+  categoryChipIcon: { width: 54, height: 54, borderRadius: 17, alignItems: "center", justifyContent: "center" },
+  categoryChipText: { fontFamily: "Inter_500Medium", fontSize: 11, color: Colors.textSecondary, textAlign: "center", maxWidth: 66 },
+  listingsCol: { gap: 12 },
+  ctaBanner: {
+    backgroundColor: Colors.green, borderRadius: 20, borderWidth: 1, borderColor: Colors.gold + "30",
+    padding: 24, alignItems: "center", gap: 10, marginBottom: 16,
   },
-  greeting: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    color: Colors.textMuted,
-    letterSpacing: 0.3,
-  },
-  tagline: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 22,
-    color: Colors.textPrimary,
-    letterSpacing: -0.5,
-    marginTop: 2,
-  },
-  notifBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
-    backgroundColor: Colors.darkCard,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-  notifDot: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.gold,
-  },
-  section: {
-    marginBottom: 28,
-  },
-  pillScroll: {
-    marginBottom: 20,
-    marginHorizontal: -16,
-  },
-  pillContent: {
-    paddingHorizontal: 16,
-    gap: 8,
-    flexDirection: "row",
-  },
-  pill: {
-    backgroundColor: Colors.darkCard,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  pillText: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 13,
-    color: Colors.textSecondary,
-  },
-  heroWrap: {
-    marginBottom: 28,
-    borderRadius: 20,
-    overflow: "hidden",
-  },
-  hero: {
-    borderRadius: 20,
-    padding: 24,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderWidth: 1,
-    borderColor: Colors.gold + "30",
-  },
-  heroContent: {
-    flex: 1,
-    gap: 6,
-  },
-  heroBadge: {
-    backgroundColor: Colors.gold + "30",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    alignSelf: "flex-start",
-    marginBottom: 4,
-  },
-  heroBadgeText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 10,
-    color: Colors.gold,
-    letterSpacing: 1,
-  },
-  heroTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 20,
-    color: Colors.textPrimary,
-    letterSpacing: -0.4,
-    lineHeight: 26,
-  },
-  heroSub: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    color: Colors.textSecondary,
-    marginTop: 4,
-  },
-  heroAccent: {
-    opacity: 1,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 14,
-  },
-  sectionTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 18,
-    color: Colors.textPrimary,
-    letterSpacing: -0.3,
-  },
-  seeAll: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 13,
-    color: Colors.gold,
-  },
-  categoryGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  listingList: {
-    gap: 12,
-  },
-  trustBanner: {
-    backgroundColor: Colors.darkCard,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 16,
-    paddingVertical: 20,
-    paddingHorizontal: 24,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  trustItem: {
-    alignItems: "center",
-    gap: 6,
-    flex: 1,
-  },
-  trustLabel: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 12,
-    color: Colors.textSecondary,
-  },
-  trustDivider: {
-    width: 1,
-    height: 32,
-    backgroundColor: Colors.border,
-  },
+  ctaTitle: { fontFamily: "Inter_700Bold", fontSize: 20, color: Colors.textPrimary, textAlign: "center" },
+  ctaText: { fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.textSecondary, textAlign: "center" },
+  ctaBtn: { backgroundColor: Colors.gold, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 28, marginTop: 4 },
+  ctaBtnText: { fontFamily: "Inter_700Bold", fontSize: 14, color: Colors.darkBg },
 });
