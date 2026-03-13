@@ -16,6 +16,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Colors } from "@/constants/colors";
 import { AppContextProvider } from "@/context/AppContext";
+import { MessagingProvider } from "@/context/MessagingContext";
+import { LocationProvider } from "@/context/LocationContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -38,6 +40,8 @@ function RootLayoutNav() {
       <Stack.Screen name="search" options={{ headerShown: false, animation: "fade" }} />
       <Stack.Screen name="my-listings" options={{ headerShown: false }} />
       <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
+      <Stack.Screen name="messages/index" options={{ headerShown: false, animation: "slide_from_bottom" }} />
+      <Stack.Screen name="messages/[id]" options={{ headerShown: false }} />
     </Stack>
   );
 }
@@ -62,13 +66,17 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ErrorBoundary>
         <AppContextProvider>
-          <QueryClientProvider client={queryClient}>
-            <GestureHandlerRootView style={{ flex: 1, backgroundColor: Colors.darkBg }}>
-              <KeyboardProvider>
-                <RootLayoutNav />
-              </KeyboardProvider>
-            </GestureHandlerRootView>
-          </QueryClientProvider>
+          <MessagingProvider>
+            <LocationProvider>
+              <QueryClientProvider client={queryClient}>
+                <GestureHandlerRootView style={{ flex: 1, backgroundColor: Colors.darkBg }}>
+                  <KeyboardProvider>
+                    <RootLayoutNav />
+                  </KeyboardProvider>
+                </GestureHandlerRootView>
+              </QueryClientProvider>
+            </LocationProvider>
+          </MessagingProvider>
         </AppContextProvider>
       </ErrorBoundary>
     </SafeAreaProvider>

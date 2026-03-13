@@ -12,9 +12,12 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import Animated, { FadeInDown } from "react-native-reanimated";
 
 import { Colors } from "@/constants/colors";
 import { useAppContext } from "@/context/AppContext";
+import { useMessaging } from "@/context/MessagingContext";
+import { useLocation } from "@/context/LocationContext";
 import { ACCOUNT_TYPES } from "@/constants/data";
 
 export default function ProfileScreen() {
@@ -22,18 +25,18 @@ export default function ProfileScreen() {
   const isWeb = Platform.OS === "web";
   const topPadding = isWeb ? 67 : insets.top;
   const { user, logout, getMyListings, getSavedListings } = useAppContext();
+  const { totalUnread, conversations } = useMessaging();
+  const { county, permissionGranted, requestLocation } = useLocation();
   const [notificationsOn, setNotificationsOn] = useState(true);
-  const [locationOn, setLocationOn] = useState(false);
 
   const myListings = getMyListings();
   const savedListings = getSavedListings();
-
   const accountTypeLabel = ACCOUNT_TYPES.find((t) => t.id === user?.accountType)?.label ?? "Customer";
 
   const handleLogout = () => {
     Alert.alert("Sign Out", "Are you sure you want to sign out?", [
       { text: "Cancel", style: "cancel" },
-      { text: "Sign Out", style: "destructive", onPress: () => { logout(); } },
+      { text: "Sign Out", style: "destructive", onPress: () => logout() },
     ]);
   };
 
@@ -45,7 +48,7 @@ export default function ProfileScreen() {
             <Ionicons name="person" size={40} color={Colors.gold} />
           </View>
           <Text style={styles.guestTitle}>Join My Kenyan Guide</Text>
-          <Text style={styles.guestText}>Create an account to post listings, save favourites, and access all features</Text>
+          <Text style={styles.guestText}>Create an account to post listings, save favourites, and message providers</Text>
           <TouchableOpacity style={styles.signInBtn} onPress={() => router.push("/auth/index")}>
             <Text style={styles.signInBtnText}>Sign In</Text>
           </TouchableOpacity>
@@ -60,62 +63,77 @@ export default function ProfileScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: topPadding + 20, paddingBottom: isWeb ? 120 : 100 },
-      ]}
+      contentContainerStyle={[styles.content, { paddingTop: topPadding + 12, paddingBottom: isWeb ? 120 : 100 }]}
       showsVerticalScrollIndicator={false}
       contentInsetAdjustmentBehavior="automatic"
     >
       {/* Profile Card */}
-      <View style={styles.profileCard}>
-        <View style={styles.avatarRow}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarInitials}>
-              {user.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
-            </Text>
-          </View>
-          <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{user.name}</Text>
-            <View style={styles.accountTypeBadge}>
-              <Ionicons name="shield-checkmark" size={12} color={Colors.gold} />
-              <Text style={styles.accountTypeText}>{accountTypeLabel}</Text>
-            </View>
-            <Text style={styles.profileEmail}>{user.email}</Text>
-            {user.location && (
-              <View style={styles.locationRow}>
-                <Ionicons name="location-outline" size={12} color={Colors.textMuted} />
-                <Text style={styles.profileLocation}>{user.location}</Text>
+      <Animated.View entering={FadeInDown.springify()}>
+        <View style={styles.profileCard}>
+          <View style={styles.avatarRow}>
+            <View style={styles.avatarWrap}>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarInitials}>
+                  {user.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+                </Text>
               </View>
-            )}
+              <View style={styles.avatarOnline} />
+            </View>
+            <View style={styles.profileInfo}>
+              <Text style={styles.profileName}>{user.name}</Text>
+              <View style={styles.accountTypeBadge}>
+                <Ionicons name="shield-checkmark" size={11} color={Colors.gold} />
+                <Text style={styles.accountTypeText}>{accountTypeLabel}</Text>
+              </View>
+              <Text style={styles.profileEmail}>{user.email}</Text>
+              {user.location && (
+                <View style={styles.infoRow}>
+                  <Ionicons name="location-outline" size={11} color={Colors.textMuted} />
+                  <Text style={styles.profileLocation}>{user.location}</Text>
+                </View>
+              )}
+              {county && (
+                <View style={styles.infoRow}>
+                  <Ionicons name="navigate-outline" size={11} color={Colors.gold} />
+                  <Text style={[styles.profileLocation, { color: Colors.gold }]}>Currently in {county}</Text>
+                </View>
+              )}
+            </View>
+            <TouchableOpacity style={styles.editBtn} onPress={() => router.push("/edit-profile")}>
+              <Ionicons name="pencil-outline" size={18} color={Colors.gold} />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.editBtn} onPress={() => router.push("/edit-profile")}>
-            <Ionicons name="pencil-outline" size={18} color={Colors.gold} />
-          </TouchableOpacity>
+
+          {user.bio ? <Text style={styles.profileBio}>{user.bio}</Text> : null}
+
+          <View style={styles.profileStats}>
+            <TouchableOpacity style={styles.statItem} onPress={() => router.push("/my-listings")}>
+              <Text style={styles.statValue}>{myListings.length}</Text>
+              <Text style={styles.statLabel}>Listings</Text>
+            </TouchableOpacity>
+            <View style={styles.statDivider} />
+            <TouchableOpacity style={styles.statItem} onPress={() => router.push("/(tabs)/saved" as any)}>
+              <Text style={styles.statValue}>{savedListings.length}</Text>
+              <Text style={styles.statLabel}>Saved</Text>
+            </TouchableOpacity>
+            <View style={styles.statDivider} />
+            <TouchableOpacity style={styles.statItem} onPress={() => router.push("/messages/index" as any)}>
+              <View style={{ alignItems: "center" }}>
+                <Text style={styles.statValue}>{conversations.length}</Text>
+                {totalUnread > 0 && (
+                  <View style={styles.statBadge}>
+                    <Text style={styles.statBadgeText}>{totalUnread} new</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.statLabel}>Messages</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-        {user.bio ? (
-          <Text style={styles.profileBio}>{user.bio}</Text>
-        ) : null}
-        <View style={styles.profileStats}>
-          <TouchableOpacity style={styles.statItem} onPress={() => router.push("/my-listings")}>
-            <Text style={styles.statValue}>{myListings.length}</Text>
-            <Text style={styles.statLabel}>Listings</Text>
-          </TouchableOpacity>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{savedListings.length}</Text>
-            <Text style={styles.statLabel}>Saved</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{user.phone ? "Yes" : "No"}</Text>
-            <Text style={styles.statLabel}>Verified</Text>
-          </View>
-        </View>
-      </View>
+      </Animated.View>
 
       {/* Quick Actions */}
-      <View style={styles.section}>
+      <Animated.View entering={FadeInDown.delay(60).springify()} style={styles.section}>
         <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={styles.actionGrid}>
           <TouchableOpacity style={styles.actionCard} onPress={() => router.push("/(tabs)/create" as any)}>
@@ -130,11 +148,16 @@ export default function ProfileScreen() {
             </View>
             <Text style={styles.actionLabel}>My Listings</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionCard} onPress={() => router.push("/(tabs)/saved" as any)}>
+          <TouchableOpacity style={[styles.actionCard, { position: "relative" }]} onPress={() => router.push("/messages/index" as any)}>
             <View style={[styles.actionIcon, { backgroundColor: "#3A1A5C" }]}>
-              <Ionicons name="bookmark" size={22} color="#A87AE8" />
+              <Ionicons name="chatbubbles" size={22} color="#A87AE8" />
             </View>
-            <Text style={styles.actionLabel}>Saved</Text>
+            {totalUnread > 0 && (
+              <View style={styles.actionBadge}>
+                <Text style={styles.actionBadgeText}>{totalUnread > 9 ? "9+" : totalUnread}</Text>
+              </View>
+            )}
+            <Text style={styles.actionLabel}>Messages</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionCard} onPress={() => router.push("/edit-profile")}>
             <View style={[styles.actionIcon, { backgroundColor: "#3A5C1A" }]}>
@@ -143,10 +166,29 @@ export default function ProfileScreen() {
             <Text style={styles.actionLabel}>Settings</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </Animated.View>
 
-      {/* Settings */}
-      <View style={styles.section}>
+      {/* Location */}
+      <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.section}>
+        <Text style={styles.sectionTitle}>Location</Text>
+        <View style={styles.menuCard}>
+          <TouchableOpacity style={styles.menuItem} onPress={requestLocation}>
+            <View style={styles.menuIconWrap}>
+              <Ionicons name="navigate" size={18} color={Colors.gold} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.menuLabel}>
+                {permissionGranted ? "Update Location" : "Enable Location"}
+              </Text>
+              {county && <Text style={styles.menuSub}>Currently: {county}</Text>}
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
+
+      {/* Preferences */}
+      <Animated.View entering={FadeInDown.delay(140).springify()} style={styles.section}>
         <Text style={styles.sectionTitle}>Preferences</Text>
         <View style={styles.menuCard}>
           <View style={styles.menuItem}>
@@ -161,31 +203,18 @@ export default function ProfileScreen() {
               thumbColor={notificationsOn ? Colors.gold : Colors.textMuted}
             />
           </View>
-          <View style={styles.menuDivider} />
-          <View style={styles.menuItem}>
-            <View style={styles.menuIconWrap}>
-              <Ionicons name="location-outline" size={18} color={Colors.gold} />
-            </View>
-            <Text style={styles.menuLabel}>Location Services</Text>
-            <Switch
-              value={locationOn}
-              onValueChange={setLocationOn}
-              trackColor={{ false: Colors.darkCardElevated, true: Colors.green }}
-              thumbColor={locationOn ? Colors.gold : Colors.textMuted}
-            />
-          </View>
         </View>
-      </View>
+      </Animated.View>
 
       {/* Support */}
-      <View style={styles.section}>
+      <Animated.View entering={FadeInDown.delay(160).springify()} style={styles.section}>
         <Text style={styles.sectionTitle}>Support</Text>
         <View style={styles.menuCard}>
           {[
             { icon: "help-circle-outline", label: "Help Center" },
             { icon: "shield-outline", label: "Trust & Safety" },
             { icon: "document-outline", label: "Terms & Privacy" },
-            { icon: "information-circle-outline", label: "About My Kenyan Guide v1.0" },
+            { icon: "information-circle-outline", label: "About — v1.0.0" },
           ].map((item, idx, arr) => (
             <React.Fragment key={item.label}>
               <TouchableOpacity style={styles.menuItem}>
@@ -199,13 +228,15 @@ export default function ProfileScreen() {
             </React.Fragment>
           ))}
         </View>
-      </View>
+      </Animated.View>
 
       {/* Sign Out */}
-      <TouchableOpacity style={styles.signOutBtn} onPress={handleLogout}>
-        <Ionicons name="log-out-outline" size={18} color="#E85C5C" />
-        <Text style={styles.signOutText}>Sign Out</Text>
-      </TouchableOpacity>
+      <Animated.View entering={FadeInDown.delay(200).springify()}>
+        <TouchableOpacity style={styles.signOutBtn} onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={18} color="#E85C5C" />
+          <Text style={styles.signOutText}>Sign Out</Text>
+        </TouchableOpacity>
+      </Animated.View>
     </ScrollView>
   );
 }
@@ -223,20 +254,24 @@ const styles = StyleSheet.create({
   registerBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: Colors.textPrimary },
   profileCard: { backgroundColor: Colors.darkCard, borderRadius: 20, borderWidth: 1, borderColor: Colors.border, padding: 18, gap: 14 },
   avatarRow: { flexDirection: "row", gap: 14, alignItems: "flex-start" },
-  avatar: { width: 60, height: 60, borderRadius: 20, backgroundColor: Colors.green, borderWidth: 2, borderColor: Colors.gold, alignItems: "center", justifyContent: "center" },
+  avatarWrap: { position: "relative" },
+  avatar: { width: 62, height: 62, borderRadius: 20, backgroundColor: Colors.green, borderWidth: 2, borderColor: Colors.gold, alignItems: "center", justifyContent: "center" },
   avatarInitials: { fontFamily: "Inter_700Bold", fontSize: 22, color: Colors.gold },
+  avatarOnline: { position: "absolute", bottom: 2, right: 2, width: 14, height: 14, borderRadius: 7, backgroundColor: "#5ADE8A", borderWidth: 2, borderColor: Colors.darkCard },
   profileInfo: { flex: 1, gap: 4 },
   profileName: { fontFamily: "Inter_700Bold", fontSize: 18, color: Colors.textPrimary },
   accountTypeBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: Colors.gold + "20", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, alignSelf: "flex-start" },
   accountTypeText: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: Colors.gold },
   profileEmail: { fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.textMuted },
-  locationRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  infoRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   profileLocation: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted },
   editBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.green + "40", borderWidth: 1, borderColor: Colors.gold + "30", alignItems: "center", justifyContent: "center" },
   profileBio: { fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.textSecondary, lineHeight: 20, paddingTop: 4, borderTopWidth: 1, borderTopColor: Colors.borderLight },
   profileStats: { flexDirection: "row", justifyContent: "space-around", borderTopWidth: 1, borderTopColor: Colors.borderLight, paddingTop: 14 },
   statItem: { alignItems: "center", gap: 4, flex: 1 },
   statValue: { fontFamily: "Inter_700Bold", fontSize: 20, color: Colors.textPrimary },
+  statBadge: { backgroundColor: Colors.gold, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1 },
+  statBadgeText: { fontFamily: "Inter_700Bold", fontSize: 9, color: Colors.darkBg },
   statLabel: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted },
   statDivider: { width: 1, backgroundColor: Colors.border },
   section: { gap: 10 },
@@ -244,11 +279,14 @@ const styles = StyleSheet.create({
   actionGrid: { flexDirection: "row", gap: 10 },
   actionCard: { flex: 1, backgroundColor: Colors.darkCard, borderWidth: 1, borderColor: Colors.border, borderRadius: 14, padding: 14, alignItems: "center", gap: 8 },
   actionIcon: { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center" },
-  actionLabel: { fontFamily: "Inter_500Medium", fontSize: 12, color: Colors.textSecondary, textAlign: "center" },
+  actionLabel: { fontFamily: "Inter_500Medium", fontSize: 11, color: Colors.textSecondary, textAlign: "center" },
+  actionBadge: { position: "absolute", top: -4, right: -4, backgroundColor: Colors.gold, borderRadius: 8, paddingHorizontal: 5, paddingVertical: 1, borderWidth: 2, borderColor: Colors.darkCard },
+  actionBadgeText: { fontFamily: "Inter_700Bold", fontSize: 9, color: Colors.darkBg },
   menuCard: { backgroundColor: Colors.darkCard, borderRadius: 16, borderWidth: 1, borderColor: Colors.border, overflow: "hidden" },
   menuItem: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
   menuIconWrap: { width: 34, height: 34, borderRadius: 10, backgroundColor: Colors.green + "40", alignItems: "center", justifyContent: "center" },
   menuLabel: { flex: 1, fontFamily: "Inter_500Medium", fontSize: 15, color: Colors.textPrimary },
+  menuSub: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.textMuted, marginTop: 1 },
   menuDivider: { height: 1, backgroundColor: Colors.borderLight, marginLeft: 62 },
   signOutBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "rgba(187,25,25,0.1)", borderRadius: 14, borderWidth: 1, borderColor: "rgba(187,25,25,0.2)", paddingVertical: 14 },
   signOutText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#E85C5C" },
