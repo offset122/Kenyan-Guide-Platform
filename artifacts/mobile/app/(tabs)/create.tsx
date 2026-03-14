@@ -9,24 +9,34 @@ import {
   Platform,
   ActivityIndicator,
   Switch,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import * as ImagePicker from "expo-image-picker";
+import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 
 import { Colors } from "@/constants/colors";
 import { CATEGORIES, CATEGORY_TAGS, KENYAN_COUNTIES } from "@/constants/data";
 import { useAppContext } from "@/context/AppContext";
+import { useToast } from "@/context/ToastContext";
+
+const MAX_PHOTOS = 6;
 
 export default function CreateListingScreen() {
   const insets = useSafeAreaInsets();
   const isWeb = Platform.OS === "web";
   const topPadding = isWeb ? 67 : insets.top;
   const { user, addListing } = useAppContext();
+  const { success: toastSuccess, error: toastError } = useToast();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
+  // Step 1 - Category
   const [categoryId, setCategoryId] = useState("");
+  // Step 2 - Details
   const [title, setTitle] = useState("");
   const [subtitle, setSubtitle] = useState("");
   const [description, setDescription] = useState("");
@@ -35,9 +45,117 @@ export default function CreateListingScreen() {
   const [phone, setPhone] = useState(user?.phone ?? "+254 ");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [available, setAvailable] = useState(true);
+  // Step 3 - Photos
+  const [photos, setPhotos] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
+
+  const availableTags = categoryId ? (CATEGORY_TAGS[categoryId] ?? []) : [];
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag].slice(0, 6)
+    );
+  };
+
+  const validateStep1 = () => {
+    if (!categoryId) return "Please select a category";
+    return null;
+  };
+
+  const validateStep2 = () => {
+    if (!title.trim()) return "Title is required";
+    if (!subtitle.trim()) return "Subtitle or short description is required";
+    if (!description.trim() || description.trim().length < 20) return "Description must be at least 20 characters";
+    if (!location.trim()) return "Location is required";
+    if (!phone.trim() || phone.replace(/\s/g, "").length < 9) return "Valid phone number is required";
+    return null;
+  };
+
+  const handleNext = () => {
+    const err = step === 1 ? validateStep1() : step === 2 ? validateStep2() : null;
+    if (err) { setError(err); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); return; }
+    setError("");
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setStep((s) => Math.min(s + 1, 3) as any);
+  };
+
+  const pickPhoto = async () => {
+    if (photos.length >= MAX_PHOTOS) {
+      toastError(`Maximum ${MAX_PHOTOS} photos allowed`);
+      return;
+    }
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission needed", "Please allow access to your photo library.");
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: false,
+        quality: 0.8,
+        allowsMultipleSelection: true,
+        selectionLimit: MAX_PHOTOS - photos.length,
+      });
+      if (!result.canceled) {
+        const newUris = result.assets.map((a) => a.uri);
+        setPhotos((prev) => [...prev, ...newUris].slice(0, MAX_PHOTOS));
+        Haptics.selectionAsync();
+      }
+    } catch (e) {
+      toastError("Could not open photo library");
+    }
+  };
+
+  const takePhoto = async () => {
+    if (photos.length >= MAX_PHOTOS) { toastError(`Maximum ${MAX_PHOTOS} photos`); return; }
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== "granted") { Alert.alert("Permission needed", "Allow camera access to take photos."); return; }
+      const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.8 });
+      if (!result.canceled && result.assets[0]) {
+        setPhotos((prev) => [...prev, result.assets[0].uri].slice(0, MAX_PHOTOS));
+        Haptics.selectionAsync();
+      }
+    } catch {}
+  };
+
+  const removePhoto = (idx: number) => {
+    Haptics.selectionAsync();
+    setPhotos((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleSubmit = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await addListing({
+        categoryId,
+        title: title.trim(),
+        subtitle: subtitle.trim(),
+        description: description.trim(),
+        location: location.trim(),
+        price: price.trim(),
+        phone: phone.trim(),
+        tags: selectedTags,
+        available,
+        photos,
+        badge: undefined,
+      });
+      toastSuccess("Listing posted successfully!");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.replace("/(tabs)");
+    } catch (e: any) {
+      setError(e.message ?? "Failed to post listing");
+      toastError("Failed to post listing");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const selectedCategory = CATEGORIES.find((c) => c.id === categoryId);
 
   if (!user) {
     return (
@@ -46,8 +164,8 @@ export default function CreateListingScreen() {
           <View style={styles.guestIcon}>
             <Ionicons name="lock-closed" size={40} color={Colors.gold} />
           </View>
-          <Text style={styles.guestTitle}>Sign In Required</Text>
-          <Text style={styles.guestText}>Create an account to post listings for free</Text>
+          <Text style={styles.guestTitle}>Sign In to Post</Text>
+          <Text style={styles.guestText}>Create a free account to post listings</Text>
           <TouchableOpacity style={styles.signInBtn} onPress={() => router.push("/auth/index")}>
             <Text style={styles.signInBtnText}>Sign In</Text>
           </TouchableOpacity>
@@ -59,371 +177,365 @@ export default function CreateListingScreen() {
     );
   }
 
-  if (success) {
-    return (
-      <View style={[styles.container, styles.successContainer, { paddingTop: topPadding }]}>
-        <View style={styles.successIcon}>
-          <Ionicons name="checkmark-circle" size={64} color={Colors.gold} />
-        </View>
-        <Text style={styles.successTitle}>Listing Published!</Text>
-        <Text style={styles.successText}>Your listing is now live on My Kenyan Guide</Text>
-        <TouchableOpacity style={styles.viewListingBtn} onPress={() => { setSuccess(false); setStep(1); router.push("/my-listings"); }}>
-          <Text style={styles.viewListingBtnText}>View My Listings</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.addAnotherBtn} onPress={() => {
-          setSuccess(false);
-          setStep(1);
-          setCategoryId("");
-          setTitle("");
-          setSubtitle("");
-          setDescription("");
-          setLocation("");
-          setPrice("");
-          setPhone(user?.phone ?? "+254 ");
-          setSelectedTags([]);
-          setAvailable(true);
-        }}>
-          <Text style={styles.addAnotherBtnText}>Add Another Listing</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  const toggleTag = (tag: string) => {
-    setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : prev.length < 5 ? [...prev, tag] : prev
-    );
-  };
-
-  const validateStep = (): string | null => {
-    if (step === 1 && !categoryId) return "Please select a category";
-    if (step === 2) {
-      if (!title.trim()) return "Title is required";
-      if (!subtitle.trim()) return "Subtitle/Tagline is required";
-      if (!description.trim() || description.length < 20) return "Description must be at least 20 characters";
-    }
-    if (step === 3) {
-      if (!location.trim()) return "Location is required";
-      if (!phone.trim() || phone.trim().length < 8) return "Valid phone number is required";
-      if (selectedTags.length === 0) return "Add at least one tag";
-    }
-    return null;
-  };
-
-  const handleNext = () => {
-    const err = validateStep();
-    if (err) { setError(err); return; }
-    setError("");
-    if (step < 3) setStep((s) => (s + 1) as any);
-    else handleSubmit();
-  };
-
-  const handleSubmit = async () => {
-    setLoading(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    try {
-      await addListing({
-        categoryId,
-        title: title.trim(),
-        subtitle: subtitle.trim(),
-        description: description.trim(),
-        location: location.trim(),
-        price: price.trim() || undefined,
-        phone: phone.trim(),
-        tags: selectedTags,
-        available,
-      });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setSuccess(true);
-    } catch (e) {
-      setError("Failed to create listing. Please try again.");
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const tags = categoryId ? CATEGORY_TAGS[categoryId] ?? [] : [];
-
   return (
     <View style={[styles.container, { paddingTop: topPadding }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        {step > 1 ? (
-          <TouchableOpacity style={styles.backBtn} onPress={() => { setStep((s) => (s - 1) as any); setError(""); }}>
-            <Ionicons name="chevron-back" size={22} color={Colors.textPrimary} />
-          </TouchableOpacity>
-        ) : <View style={{ width: 38 }} />}
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Post a Listing</Text>
-          <Text style={styles.headerStep}>Step {step} of 3</Text>
+      {/* Nav */}
+      <View style={styles.nav}>
+        <TouchableOpacity style={styles.navBtn} onPress={() => step === 1 ? null : setStep((s) => (s - 1) as any)}>
+          {step > 1 && <Ionicons name="chevron-back" size={22} color={Colors.textPrimary} />}
+        </TouchableOpacity>
+        <View style={styles.navCenter}>
+          <Text style={styles.navTitle}>New Listing</Text>
+          <Text style={styles.navStep}>Step {step} of 3</Text>
         </View>
-        <View style={{ width: 38 }} />
+        <TouchableOpacity style={styles.navBtn} onPress={() => router.back()}>
+          <Ionicons name="close" size={20} color={Colors.textMuted} />
+        </TouchableOpacity>
       </View>
 
       {/* Progress */}
-      <View style={styles.progressBar}>
-        <View style={[styles.progressFill, { width: `${(step / 3) * 100}%` }]} />
+      <View style={styles.progressTrack}>
+        <View style={[styles.progressFill, { width: `${Math.round((step / 3) * 100)}%` as any }]} />
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: isWeb ? 34 : insets.bottom + 32 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+
+        {/* ─── STEP 1: CATEGORY ─── */}
         {step === 1 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Choose Category</Text>
-            <Text style={styles.sectionSubtitle}>What type of listing is this?</Text>
-            <View style={styles.categoryList}>
+          <View>
+            <Text style={styles.stepTitle}>Choose a Category</Text>
+            <Text style={styles.stepSubtitle}>What type of listing are you creating?</Text>
+            <View style={styles.categoryGrid}>
               {CATEGORIES.map((cat) => {
+                const isActive = categoryId === cat.id;
                 const Icon = cat.iconSet === "MaterialIcons" ? MaterialIcons : Ionicons;
                 return (
                   <TouchableOpacity
                     key={cat.id}
-                    style={[styles.catCard, categoryId === cat.id && styles.catCardActive]}
-                    onPress={() => { setCategoryId(cat.id); setSelectedTags([]); }}
+                    style={[styles.catCard, isActive && styles.catCardActive]}
+                    onPress={() => { setCategoryId(cat.id); setSelectedTags([]); Haptics.selectionAsync(); }}
+                    activeOpacity={0.85}
                   >
-                    <View style={[styles.catIcon, { backgroundColor: cat.color }]}>
+                    <View style={[styles.catIcon, { backgroundColor: cat.color + (isActive ? "FF" : "99") }]}>
                       {/* @ts-ignore */}
-                      <Icon name={cat.icon} size={22} color={cat.accentColor} />
+                      <Icon name={cat.icon} size={24} color={cat.accentColor} />
                     </View>
-                    <View style={styles.catInfo}>
-                      <Text style={[styles.catTitle, categoryId === cat.id && { color: Colors.gold }]}>{cat.title}</Text>
-                      <Text style={styles.catDesc}>{cat.description.substring(0, 60)}...</Text>
-                    </View>
-                    {categoryId === cat.id && (
-                      <Ionicons name="checkmark-circle" size={22} color={Colors.gold} />
+                    <Text style={[styles.catLabel, isActive && { color: Colors.gold }]}>{cat.title}</Text>
+                    <Text style={styles.catCount}>{cat.id === "providers" ? "Best for freelancers" : cat.id === "products" ? "Buy & sell items" : cat.id === "realestate" ? "Property listings" : cat.id === "jobs" ? "Job postings" : cat.id === "emergency" ? "Emergency services" : "Businesses"}</Text>
+                    {isActive && (
+                      <View style={styles.catCheck}>
+                        <Ionicons name="checkmark-circle" size={18} color={Colors.gold} />
+                      </View>
                     )}
                   </TouchableOpacity>
                 );
               })}
             </View>
+            {error ? <ErrorBox message={error} /> : null}
+            <TouchableOpacity style={[styles.primaryBtn, !categoryId && { opacity: 0.6 }]} onPress={handleNext} disabled={!categoryId}>
+              <Text style={styles.primaryBtnText}>Continue</Text>
+              <Ionicons name="arrow-forward" size={18} color={Colors.darkBg} />
+            </TouchableOpacity>
           </View>
         )}
 
+        {/* ─── STEP 2: DETAILS ─── */}
         {step === 2 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Listing Details</Text>
-            <Text style={styles.sectionSubtitle}>Describe what you're offering</Text>
+          <View>
+            {selectedCategory && (
+              <View style={styles.catBanner}>
+                <View style={[styles.catBannerIcon, { backgroundColor: selectedCategory.color }]}>
+                  {selectedCategory.iconSet === "MaterialIcons"
+                    ? /* @ts-ignore */ <MaterialIcons name={selectedCategory.icon} size={18} color={selectedCategory.accentColor} />
+                    : <Ionicons name={selectedCategory.icon as any} size={18} color={selectedCategory.accentColor} />
+                  }
+                </View>
+                <Text style={styles.catBannerText}>{selectedCategory.title}</Text>
+              </View>
+            )}
+
+            <Text style={styles.stepTitle}>Listing Details</Text>
+            <Text style={styles.stepSubtitle}>Fill in the information about your listing</Text>
+
             <View style={styles.form}>
-              <FormField label="Title *" placeholder="e.g. John Kamau – Electrician" value={title} onChangeText={setTitle} maxLength={60} />
-              <FormField label="Tagline *" placeholder="e.g. Certified residential & commercial" value={subtitle} onChangeText={setSubtitle} maxLength={80} />
+              <Field label="Title *" icon="text-outline" value={title} onChangeText={setTitle} placeholder={categoryId === "products" ? "e.g. Samsung Galaxy S24 – 256GB" : categoryId === "jobs" ? "e.g. Senior Software Engineer" : "e.g. James Mwangi – Master Plumber"} />
+              <Field label="Short Description *" icon="document-text-outline" value={subtitle} onChangeText={setSubtitle} placeholder={categoryId === "realestate" ? "e.g. 3BR Apartment, Kileleshwa" : "e.g. Certified electrician, 10 years experience"} />
+
               <View style={styles.field}>
-                <Text style={styles.label}>Description *</Text>
-                <View style={[styles.inputWrap, { alignItems: "flex-start", paddingVertical: 12 }]}>
+                <Text style={styles.label}>Full Description *</Text>
+                <View style={[styles.inputWrap, { alignItems: "flex-start", paddingTop: 12, paddingBottom: 12 }]}>
                   <TextInput
-                    style={[styles.input, { height: 120, textAlignVertical: "top" }]}
+                    style={[styles.input, { height: 100, textAlignVertical: "top" }]}
                     value={description}
                     onChangeText={setDescription}
-                    placeholder="Describe your service, experience, and what makes you unique..."
+                    placeholder="Describe your listing in detail. Include what makes it special, experience, conditions, etc."
                     placeholderTextColor={Colors.textMuted}
                     multiline
-                    maxLength={500}
+                    maxLength={600}
                   />
                 </View>
-                <Text style={styles.charCount}>{description.length}/500 (min 20)</Text>
+                <Text style={styles.charCount}>{description.length}/600</Text>
               </View>
+
+              <View style={styles.row2}>
+                <View style={[styles.field, { flex: 1 }]}>
+                  <Text style={styles.label}>Location *</Text>
+                  <View style={styles.inputWrap}>
+                    <Ionicons name="location-outline" size={16} color={Colors.textMuted} />
+                    <TextInput style={styles.input} value={location} onChangeText={setLocation} placeholder="Area, County" placeholderTextColor={Colors.textMuted} />
+                  </View>
+                </View>
+                <View style={[styles.field, { flex: 1 }]}>
+                  <Text style={styles.label}>Price</Text>
+                  <View style={styles.inputWrap}>
+                    <Text style={styles.kshLabel}>KSh</Text>
+                    <TextInput style={styles.input} value={price} onChangeText={setPrice} placeholder="e.g. 2,500/hr" placeholderTextColor={Colors.textMuted} keyboardType="default" />
+                  </View>
+                </View>
+              </View>
+
+              <Field label="Contact Phone *" icon="call-outline" value={phone} onChangeText={setPhone} placeholder="+254 7XX XXX XXX" keyboardType="phone-pad" />
+
+              {/* Quick county chips */}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 2 }}>
+                {KENYAN_COUNTIES.slice(0, 12).map((c) => (
+                  <TouchableOpacity key={c} style={[styles.pill, location.includes(c) && styles.pillActive]} onPress={() => setLocation(c)}>
+                    <Text style={[styles.pillText, location.includes(c) && styles.pillTextActive]}>{c}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              {availableTags.length > 0 && (
+                <View style={styles.field}>
+                  <Text style={styles.label}>Tags <Text style={{ color: Colors.textMuted }}>(select up to 6)</Text></Text>
+                  <View style={styles.tagsWrap}>
+                    {availableTags.map((tag) => (
+                      <TouchableOpacity
+                        key={tag}
+                        style={[styles.tagChip, selectedTags.includes(tag) && styles.tagChipActive]}
+                        onPress={() => toggleTag(tag)}
+                      >
+                        {selectedTags.includes(tag) && <Ionicons name="checkmark" size={12} color={Colors.gold} />}
+                        <Text style={[styles.tagText, selectedTags.includes(tag) && { color: Colors.gold }]}>{tag}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {error ? <ErrorBox message={error} /> : null}
+
+              <TouchableOpacity style={styles.primaryBtn} onPress={handleNext}>
+                <Text style={styles.primaryBtnText}>Add Photos & Publish</Text>
+                <Ionicons name="arrow-forward" size={18} color={Colors.darkBg} />
+              </TouchableOpacity>
             </View>
           </View>
         )}
 
+        {/* ─── STEP 3: PHOTOS & PUBLISH ─── */}
         {step === 3 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Contact & Details</Text>
-            <Text style={styles.sectionSubtitle}>Help people reach you</Text>
-            <View style={styles.form}>
-              <View style={styles.field}>
-                <Text style={styles.label}>Location *</Text>
-                <View style={styles.inputWrap}>
-                  <Ionicons name="location-outline" size={18} color={Colors.textMuted} />
-                  <TextInput
-                    style={styles.input}
-                    value={location}
-                    onChangeText={setLocation}
-                    placeholder="Area, Town, County"
-                    placeholderTextColor={Colors.textMuted}
-                  />
+          <View>
+            <Text style={styles.stepTitle}>Photos & Publish</Text>
+            <Text style={styles.stepSubtitle}>Add up to {MAX_PHOTOS} photos. Listings with photos get 3× more views!</Text>
+
+            <View style={styles.photoGrid}>
+              {photos.map((uri, i) => (
+                <View key={i} style={styles.photoThumb}>
+                  <Image source={{ uri }} style={styles.photoImg} contentFit="cover" />
+                  {i === 0 && (
+                    <View style={styles.photoCoverBadge}>
+                      <Text style={styles.photoCoverText}>Cover</Text>
+                    </View>
+                  )}
+                  <TouchableOpacity style={styles.photoRemoveBtn} onPress={() => removePhoto(i)}>
+                    <Ionicons name="close" size={12} color="#fff" />
+                  </TouchableOpacity>
                 </View>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }} contentContainerStyle={{ gap: 6 }}>
-                  {KENYAN_COUNTIES.slice(0, 8).map((c) => (
-                    <TouchableOpacity key={c} style={[styles.pill, location === c && styles.pillActive]} onPress={() => setLocation(c)}>
-                      <Text style={[styles.pillText, location === c && styles.pillTextActive]}>{c}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-
-              <FormField label="Phone Number *" placeholder="+254 7XX XXX XXX" value={phone} onChangeText={setPhone} keyboardType="phone-pad" icon="call-outline" />
-              <FormField label="Price / Rate (Optional)" placeholder="e.g. KSh 2,500/hr, KSh 45,000/mo" value={price} onChangeText={setPrice} icon="pricetag-outline" />
-
-              {/* Tags */}
-              <View style={styles.field}>
-                <Text style={styles.label}>Tags * (up to 5)</Text>
-                <View style={styles.tagsWrap}>
-                  {tags.map((tag) => (
-                    <TouchableOpacity
-                      key={tag}
-                      style={[styles.tagChip, selectedTags.includes(tag) && styles.tagChipActive]}
-                      onPress={() => toggleTag(tag)}
-                    >
-                      <Text style={[styles.tagChipText, selectedTags.includes(tag) && styles.tagChipTextActive]}>{tag}</Text>
-                    </TouchableOpacity>
-                  ))}
+              ))}
+              {photos.length < MAX_PHOTOS && (
+                <View style={styles.photoAddRow}>
+                  <TouchableOpacity style={styles.photoAddBtn} onPress={pickPhoto}>
+                    <Ionicons name="images-outline" size={24} color={Colors.gold} />
+                    <Text style={styles.photoAddText}>Gallery</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.photoAddBtn} onPress={takePhoto}>
+                    <Ionicons name="camera-outline" size={24} color={Colors.gold} />
+                    <Text style={styles.photoAddText}>Camera</Text>
+                  </TouchableOpacity>
                 </View>
-              </View>
+              )}
+            </View>
 
-              {/* Availability */}
-              <View style={styles.availableRow}>
+            {photos.length === 0 && (
+              <View style={styles.noPhotosHint}>
+                <Ionicons name="image-outline" size={38} color={Colors.textMuted} />
+                <Text style={styles.noPhotosText}>No photos added yet</Text>
+                <Text style={styles.noPhotosSubText}>Photos are optional but strongly recommended</Text>
+              </View>
+            )}
+
+            {/* Availability */}
+            <View style={styles.availRow}>
+              <View style={styles.availInfo}>
+                <View style={[styles.availDot, { backgroundColor: available ? "#5ADE8A" : Colors.textMuted }]} />
                 <View>
-                  <Text style={styles.label}>Available Now</Text>
-                  <Text style={styles.availableDesc}>Show as immediately available</Text>
+                  <Text style={styles.availTitle}>{available ? "Available Now" : "Not Available"}</Text>
+                  <Text style={styles.availSub}>Listing will show {available ? "as active" : "as unavailable"}</Text>
                 </View>
-                <Switch
-                  value={available}
-                  onValueChange={setAvailable}
-                  trackColor={{ false: Colors.darkCardElevated, true: Colors.green }}
-                  thumbColor={available ? Colors.gold : Colors.textMuted}
-                />
+              </View>
+              <Switch
+                value={available}
+                onValueChange={setAvailable}
+                trackColor={{ false: Colors.darkCardElevated, true: Colors.green }}
+                thumbColor={available ? Colors.gold : Colors.textMuted}
+              />
+            </View>
+
+            {/* Preview card */}
+            <View style={styles.previewCard}>
+              <Text style={styles.previewLabel}>Preview</Text>
+              <View style={styles.previewContent}>
+                {photos[0] ? (
+                  <Image source={{ uri: photos[0] }} style={styles.previewImg} contentFit="cover" />
+                ) : (
+                  <View style={[styles.previewImg, { backgroundColor: selectedCategory?.color ?? Colors.darkCardElevated, alignItems: "center", justifyContent: "center" }]}>
+                    {selectedCategory ? (
+                      selectedCategory.iconSet === "MaterialIcons"
+                        ? /* @ts-ignore */ <MaterialIcons name={selectedCategory.icon} size={28} color={selectedCategory.accentColor} />
+                        : <Ionicons name={selectedCategory.icon as any} size={28} color={selectedCategory.accentColor} />
+                    ) : <Ionicons name="image-outline" size={28} color={Colors.textMuted} />}
+                  </View>
+                )}
+                <View style={{ flex: 1, gap: 4 }}>
+                  <Text style={styles.previewTitle} numberOfLines={1}>{title || "Your listing title"}</Text>
+                  <Text style={styles.previewSubtitle} numberOfLines={1}>{subtitle || "Short description"}</Text>
+                  <View style={{ flexDirection: "row", gap: 6 }}>
+                    <Text style={styles.previewLocation}><Ionicons name="location-outline" size={11} /> {location || "Location"}</Text>
+                    {price ? <Text style={styles.previewPrice}>KSh {price}</Text> : null}
+                  </View>
+                </View>
               </View>
             </View>
+
+            {error ? <ErrorBox message={error} /> : null}
+
+            <TouchableOpacity
+              style={[styles.publishBtn, loading && { opacity: 0.7 }]}
+              onPress={handleSubmit}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color={Colors.darkBg} />
+              ) : (
+                <>
+                  <Ionicons name="checkmark-circle" size={20} color={Colors.darkBg} />
+                  <Text style={styles.primaryBtnText}>Publish Listing</Text>
+                </>
+              )}
+            </TouchableOpacity>
           </View>
         )}
-
-        {error ? (
-          <View style={styles.errorWrap}>
-            <Ionicons name="alert-circle-outline" size={16} color="#E85C5C" />
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        ) : null}
-
-        <TouchableOpacity
-          style={[styles.nextBtn, loading && { opacity: 0.7 }]}
-          onPress={handleNext}
-          disabled={loading}
-        >
-          {loading ? <ActivityIndicator color={Colors.darkBg} /> : (
-            <>
-              <Text style={styles.nextBtnText}>{step === 3 ? "Publish Listing" : "Continue"}</Text>
-              <Ionicons name={step === 3 ? "checkmark" : "arrow-forward"} size={18} color={Colors.darkBg} />
-            </>
-          )}
-        </TouchableOpacity>
-
-        <View style={{ height: isWeb ? 120 : 80 }} />
       </ScrollView>
     </View>
   );
 }
 
-function FormField({ label, value, onChangeText, placeholder, maxLength, icon, keyboardType, secureTextEntry }: {
-  label: string; value: string; onChangeText: (t: string) => void;
-  placeholder?: string; maxLength?: number; icon?: string;
-  keyboardType?: any; secureTextEntry?: boolean;
-}) {
+function Field({ label, icon, ...props }: any) {
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
       <View style={styles.inputWrap}>
-        {icon && <Ionicons name={icon as any} size={18} color={Colors.textMuted} />}
-        <TextInput
-          style={styles.input}
-          value={value}
-          onChangeText={onChangeText}
-          placeholder={placeholder}
-          placeholderTextColor={Colors.textMuted}
-          maxLength={maxLength}
-          keyboardType={keyboardType}
-          secureTextEntry={secureTextEntry}
-        />
+        <Ionicons name={icon} size={17} color={Colors.textMuted} />
+        <TextInput style={styles.input} placeholderTextColor={Colors.textMuted} {...props} />
       </View>
-      {maxLength && <Text style={styles.charCount}>{value.length}/{maxLength}</Text>}
+    </View>
+  );
+}
+
+function ErrorBox({ message }: { message: string }) {
+  return (
+    <View style={styles.errorBox}>
+      <Ionicons name="alert-circle-outline" size={16} color="#E85C5C" />
+      <Text style={styles.errorText}>{message}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.darkBg },
-  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, justifyContent: "space-between" },
-  backBtn: {
-    width: 38, height: 38, borderRadius: 12,
-    backgroundColor: Colors.darkCard, borderWidth: 1, borderColor: Colors.border,
-    alignItems: "center", justifyContent: "center",
-  },
-  headerCenter: { alignItems: "center" },
-  headerTitle: { fontFamily: "Inter_700Bold", fontSize: 16, color: Colors.textPrimary },
-  headerStep: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted, marginTop: 2 },
-  progressBar: { height: 3, backgroundColor: Colors.darkCard, marginHorizontal: 16, borderRadius: 2, marginBottom: 20 },
+  nav: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingBottom: 8 },
+  navBtn: { width: 38, height: 38, alignItems: "center", justifyContent: "center" },
+  navCenter: { flex: 1, alignItems: "center" },
+  navTitle: { fontFamily: "Inter_700Bold", fontSize: 16, color: Colors.textPrimary },
+  navStep: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted },
+  progressTrack: { height: 3, backgroundColor: Colors.borderLight, marginHorizontal: 16, borderRadius: 2 },
   progressFill: { height: 3, backgroundColor: Colors.gold, borderRadius: 2 },
-  scrollContent: { paddingHorizontal: 16 },
-  section: { gap: 0 },
-  sectionTitle: { fontFamily: "Inter_700Bold", fontSize: 22, color: Colors.textPrimary, marginBottom: 4 },
-  sectionSubtitle: { fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.textMuted, marginBottom: 20 },
-  categoryList: { gap: 10 },
-  catCard: {
-    flexDirection: "row", alignItems: "center", gap: 14,
-    backgroundColor: Colors.darkCard, borderWidth: 1, borderColor: Colors.border,
-    borderRadius: 16, padding: 14,
-  },
+  scroll: { paddingHorizontal: 16, paddingTop: 20, gap: 0 },
+  stepTitle: { fontFamily: "Inter_700Bold", fontSize: 22, color: Colors.textPrimary, letterSpacing: -0.4, marginBottom: 6 },
+  stepSubtitle: { fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.textMuted, marginBottom: 20 },
+  categoryGrid: { gap: 10, marginBottom: 20 },
+  catCard: { backgroundColor: Colors.darkCard, borderWidth: 1, borderColor: Colors.border, borderRadius: 16, padding: 16, flexDirection: "row", alignItems: "center", gap: 14, position: "relative" },
   catCardActive: { borderColor: Colors.gold + "60", backgroundColor: Colors.green + "20" },
-  catIcon: { width: 46, height: 46, borderRadius: 14, alignItems: "center", justifyContent: "center" },
-  catInfo: { flex: 1 },
-  catTitle: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: Colors.textPrimary },
-  catDesc: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted, marginTop: 2 },
-  form: { gap: 18 },
-  field: { gap: 8 },
-  label: { fontFamily: "Inter_500Medium", fontSize: 13, color: Colors.textSecondary, paddingLeft: 4 },
-  inputWrap: {
-    flexDirection: "row", alignItems: "center",
-    backgroundColor: Colors.darkCard, borderWidth: 1, borderColor: Colors.border,
-    borderRadius: 14, paddingHorizontal: 14, paddingVertical: 14, gap: 10,
-  },
+  catIcon: { width: 48, height: 48, borderRadius: 15, alignItems: "center", justifyContent: "center" },
+  catLabel: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: Colors.textPrimary, flex: 1 },
+  catCount: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.textMuted, position: "absolute", right: 14, bottom: 14 },
+  catCheck: { position: "absolute", top: 12, right: 12 },
+  catBanner: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: Colors.darkCard, borderRadius: 12, padding: 10, marginBottom: 16, borderWidth: 1, borderColor: Colors.border },
+  catBannerIcon: { width: 34, height: 34, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  catBannerText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.textSecondary },
+  form: { gap: 16 },
+  field: { gap: 7 },
+  label: { fontFamily: "Inter_500Medium", fontSize: 13, color: Colors.textSecondary, paddingLeft: 2 },
+  inputWrap: { flexDirection: "row", alignItems: "center", backgroundColor: Colors.darkCard, borderWidth: 1, borderColor: Colors.border, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 13, gap: 10 },
   input: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 15, color: Colors.textPrimary, padding: 0 },
-  charCount: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.textMuted, textAlign: "right" },
-  pill: { backgroundColor: Colors.darkCard, borderWidth: 1, borderColor: Colors.border, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
-  pillActive: { backgroundColor: Colors.gold + "20", borderColor: Colors.gold },
+  kshLabel: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.textMuted },
+  charCount: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.textMuted, textAlign: "right", marginTop: 3 },
+  row2: { flexDirection: "row", gap: 10 },
+  pill: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: Colors.darkCard, borderWidth: 1, borderColor: Colors.border },
+  pillActive: { backgroundColor: Colors.gold + "20", borderColor: Colors.gold + "50" },
   pillText: { fontFamily: "Inter_500Medium", fontSize: 12, color: Colors.textMuted },
   pillTextActive: { color: Colors.gold },
   tagsWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  tagChip: { backgroundColor: Colors.darkCard, borderWidth: 1, borderColor: Colors.border, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8 },
-  tagChipActive: { backgroundColor: Colors.green + "40", borderColor: Colors.green },
-  tagChipText: { fontFamily: "Inter_500Medium", fontSize: 13, color: Colors.textMuted },
-  tagChipTextActive: { color: Colors.textPrimary },
-  availableRow: {
-    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
-    backgroundColor: Colors.darkCard, borderWidth: 1, borderColor: Colors.border,
-    borderRadius: 14, padding: 16,
-  },
-  availableDesc: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted, marginTop: 2 },
-  errorWrap: {
-    flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12,
-    backgroundColor: "rgba(232,92,92,0.1)", borderWidth: 1, borderColor: "rgba(232,92,92,0.3)",
-    borderRadius: 10, padding: 12,
-  },
+  tagChip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 12, paddingVertical: 7, backgroundColor: Colors.darkCard, borderWidth: 1, borderColor: Colors.border, borderRadius: 10 },
+  tagChipActive: { borderColor: Colors.gold + "50", backgroundColor: Colors.green + "25" },
+  tagText: { fontFamily: "Inter_500Medium", fontSize: 13, color: Colors.textSecondary },
+  photoGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 16 },
+  photoThumb: { width: 100, height: 100, borderRadius: 14, overflow: "hidden", position: "relative" },
+  photoImg: { width: "100%", height: "100%" },
+  photoCoverBadge: { position: "absolute", bottom: 6, left: 6, backgroundColor: Colors.gold, borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2 },
+  photoCoverText: { fontFamily: "Inter_700Bold", fontSize: 9, color: Colors.darkBg },
+  photoRemoveBtn: { position: "absolute", top: 6, right: 6, width: 22, height: 22, borderRadius: 11, backgroundColor: "rgba(0,0,0,0.6)", alignItems: "center", justifyContent: "center" },
+  photoAddRow: { gap: 10 },
+  photoAddBtn: { width: 100, height: 100, borderRadius: 14, backgroundColor: Colors.darkCard, borderWidth: 1.5, borderColor: Colors.gold + "40", borderStyle: "dashed", alignItems: "center", justifyContent: "center", gap: 6 },
+  photoAddText: { fontFamily: "Inter_500Medium", fontSize: 11, color: Colors.gold },
+  noPhotosHint: { alignItems: "center", paddingVertical: 24, gap: 8, backgroundColor: Colors.darkCard, borderRadius: 16, marginBottom: 16, borderWidth: 1, borderColor: Colors.borderLight },
+  noPhotosText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: Colors.textSecondary },
+  noPhotosSubText: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted },
+  availRow: { flexDirection: "row", alignItems: "center", backgroundColor: Colors.darkCard, borderRadius: 14, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: Colors.border },
+  availInfo: { flex: 1, flexDirection: "row", alignItems: "center", gap: 12 },
+  availDot: { width: 10, height: 10, borderRadius: 5 },
+  availTitle: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.textPrimary },
+  availSub: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted },
+  previewCard: { backgroundColor: Colors.darkCard, borderRadius: 16, borderWidth: 1, borderColor: Colors.gold + "30", padding: 14, marginBottom: 20 },
+  previewLabel: { fontFamily: "Inter_500Medium", fontSize: 11, color: Colors.gold, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10 },
+  previewContent: { flexDirection: "row", gap: 12, alignItems: "center" },
+  previewImg: { width: 56, height: 56, borderRadius: 14 },
+  previewTitle: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.textPrimary },
+  previewSubtitle: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textSecondary },
+  previewLocation: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.textMuted },
+  previewPrice: { fontFamily: "Inter_700Bold", fontSize: 11, color: Colors.gold },
+  primaryBtn: { backgroundColor: Colors.gold, borderRadius: 14, paddingVertical: 16, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8, marginTop: 8 },
+  publishBtn: { backgroundColor: Colors.gold, borderRadius: 14, paddingVertical: 16, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 },
+  primaryBtnText: { fontFamily: "Inter_700Bold", fontSize: 16, color: Colors.darkBg },
+  errorBox: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "rgba(232,92,92,0.1)", borderWidth: 1, borderColor: "rgba(232,92,92,0.3)", borderRadius: 12, padding: 12 },
   errorText: { fontFamily: "Inter_400Regular", fontSize: 13, color: "#E85C5C", flex: 1 },
-  nextBtn: {
-    backgroundColor: Colors.gold, borderRadius: 14, paddingVertical: 16,
-    alignItems: "center", justifyContent: "center",
-    flexDirection: "row", gap: 8, marginTop: 24,
-  },
-  nextBtnText: { fontFamily: "Inter_700Bold", fontSize: 16, color: Colors.darkBg },
-  guestWrap: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32, gap: 16 },
-  guestIcon: {
-    width: 88, height: 88, borderRadius: 28, backgroundColor: Colors.green,
-    borderWidth: 1, borderColor: Colors.gold + "40", alignItems: "center", justifyContent: "center",
-  },
+  guestWrap: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16, paddingHorizontal: 32 },
+  guestIcon: { width: 88, height: 88, borderRadius: 28, backgroundColor: Colors.green, borderWidth: 1, borderColor: Colors.gold + "40", alignItems: "center", justifyContent: "center" },
   guestTitle: { fontFamily: "Inter_700Bold", fontSize: 22, color: Colors.textPrimary },
-  guestText: { fontFamily: "Inter_400Regular", fontSize: 15, color: Colors.textMuted, textAlign: "center" },
-  signInBtn: { backgroundColor: Colors.gold, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 48, width: "100%", alignItems: "center" },
+  guestText: { fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.textMuted, textAlign: "center" },
+  signInBtn: { backgroundColor: Colors.gold, borderRadius: 14, paddingVertical: 14, width: "100%", alignItems: "center" },
   signInBtnText: { fontFamily: "Inter_700Bold", fontSize: 15, color: Colors.darkBg },
-  registerBtn: { borderWidth: 1, borderColor: Colors.border, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 48, width: "100%", alignItems: "center" },
+  registerBtn: { borderWidth: 1, borderColor: Colors.border, borderRadius: 14, paddingVertical: 14, width: "100%", alignItems: "center" },
   registerBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: Colors.textPrimary },
-  successContainer: { alignItems: "center", justifyContent: "center", gap: 16, paddingHorizontal: 32 },
-  successIcon: { marginBottom: 8 },
-  successTitle: { fontFamily: "Inter_700Bold", fontSize: 24, color: Colors.textPrimary },
-  successText: { fontFamily: "Inter_400Regular", fontSize: 15, color: Colors.textMuted, textAlign: "center" },
-  viewListingBtn: { backgroundColor: Colors.gold, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 32, width: "100%", alignItems: "center" },
-  viewListingBtnText: { fontFamily: "Inter_700Bold", fontSize: 15, color: Colors.darkBg },
-  addAnotherBtn: { borderWidth: 1, borderColor: Colors.border, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 32, width: "100%", alignItems: "center" },
-  addAnotherBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: Colors.textPrimary },
 });

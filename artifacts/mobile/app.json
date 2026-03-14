@@ -14,9 +14,18 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "My Kenyan Guide uses your location to show you nearby listings and services in your area.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "My Kenyan Guide uses your location to show you nearby listings and services in your area."
+      }
     },
-    "android": {},
+    "android": {
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
+    },
     "web": {
       "favicon": "./assets/images/icon.png"
     },
@@ -28,7 +37,14 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "My Kenyan Guide uses your location to show nearby listings and services.",
+          "locationWhenInUsePermission": "My Kenyan Guide uses your location to show nearby listings and services."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

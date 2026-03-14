@@ -5,10 +5,51 @@ import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
 import { SymbolView } from "expo-symbols";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { Platform, StyleSheet, View, useColorScheme } from "react-native";
+import { Platform, StyleSheet, View, Text, useColorScheme } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
+import { useMessaging } from "@/context/MessagingContext";
+
+function ProfileTabIcon({ color, focused }: { color: string; focused: boolean }) {
+  const { totalUnread } = useMessaging();
+  const isIOS = Platform.OS === "ios";
+  return (
+    <View style={{ width: 24, height: 24, alignItems: "center", justifyContent: "center" }}>
+      {isIOS
+        ? <SymbolView name={focused ? "person.fill" : "person"} tintColor={color} size={22} />
+        : <Ionicons name={focused ? "person" : "person-outline"} size={22} color={color} />
+      }
+      {totalUnread > 0 && (
+        <View style={badgeStyles.dot}>
+          <Text style={badgeStyles.dotText}>{totalUnread > 9 ? "9+" : totalUnread}</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+const badgeStyles = StyleSheet.create({
+  dot: {
+    position: "absolute",
+    top: -5,
+    right: -8,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: Colors.gold,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+    borderWidth: 1.5,
+    borderColor: Colors.darkCard,
+  },
+  dotText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 9,
+    color: Colors.darkBg,
+  },
+});
 
 function NativeTabLayout() {
   return (
@@ -38,7 +79,6 @@ function NativeTabLayout() {
 }
 
 function ClassicTabLayout() {
-  const isDark = true;
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
   const insets = useSafeAreaInsets();
@@ -49,6 +89,7 @@ function ClassicTabLayout() {
         headerShown: false,
         tabBarActiveTintColor: Colors.gold,
         tabBarInactiveTintColor: Colors.textMuted,
+        tabBarLabelStyle: { fontFamily: "Inter_500Medium", fontSize: 11 },
         tabBarStyle: {
           position: "absolute",
           backgroundColor: isIOS ? "transparent" : Colors.darkCard,
@@ -70,40 +111,47 @@ function ClassicTabLayout() {
         name="index"
         options={{
           title: "Home",
-          tabBarIcon: ({ color }) =>
-            isIOS ? <SymbolView name="house.fill" tintColor={color} size={22} /> : <Ionicons name="home" size={22} color={color} />,
+          tabBarIcon: ({ color, focused }) =>
+            isIOS
+              ? <SymbolView name={focused ? "house.fill" : "house"} tintColor={color} size={22} />
+              : <Ionicons name={focused ? "home" : "home-outline"} size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="explore"
         options={{
           title: "Explore",
-          tabBarIcon: ({ color }) =>
-            isIOS ? <SymbolView name="square.grid.2x2.fill" tintColor={color} size={22} /> : <Ionicons name="grid" size={22} color={color} />,
+          tabBarIcon: ({ color, focused }) =>
+            isIOS
+              ? <SymbolView name={focused ? "square.grid.2x2.fill" : "square.grid.2x2"} tintColor={color} size={22} />
+              : <Ionicons name={focused ? "grid" : "grid-outline"} size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="create"
         options={{
           title: "Post",
-          tabBarIcon: ({ color }) =>
-            isIOS ? <SymbolView name="plus.circle.fill" tintColor={color} size={26} /> : <Ionicons name="add-circle" size={28} color={color} />,
+          tabBarIcon: ({ color, focused }) =>
+            isIOS
+              ? <SymbolView name="plus.circle.fill" tintColor={color} size={28} />
+              : <Ionicons name={focused ? "add-circle" : "add-circle-outline"} size={28} color={color} />,
         }}
       />
       <Tabs.Screen
         name="saved"
         options={{
           title: "Saved",
-          tabBarIcon: ({ color }) =>
-            isIOS ? <SymbolView name="bookmark.fill" tintColor={color} size={22} /> : <Ionicons name="bookmark" size={22} color={color} />,
+          tabBarIcon: ({ color, focused }) =>
+            isIOS
+              ? <SymbolView name={focused ? "bookmark.fill" : "bookmark"} tintColor={color} size={22} />
+              : <Ionicons name={focused ? "bookmark" : "bookmark-outline"} size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: "Profile",
-          tabBarIcon: ({ color }) =>
-            isIOS ? <SymbolView name="person.fill" tintColor={color} size={22} /> : <Ionicons name="person" size={22} color={color} />,
+          tabBarIcon: ({ color, focused }) => <ProfileTabIcon color={color} focused={focused} />,
         }}
       />
     </Tabs>
@@ -111,9 +159,7 @@ function ClassicTabLayout() {
 }
 
 export default function TabLayout() {
-  if (isLiquidGlassAvailable()) {
-    return <NativeTabLayout />;
-  }
+  if (isLiquidGlassAvailable()) return <NativeTabLayout />;
   return <ClassicTabLayout />;
 }
 

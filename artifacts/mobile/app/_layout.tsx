@@ -18,31 +18,40 @@ import { Colors } from "@/constants/colors";
 import { AppContextProvider } from "@/context/AppContext";
 import { MessagingProvider } from "@/context/MessagingContext";
 import { LocationProvider } from "@/context/LocationContext";
+import { ToastProvider, useToast } from "@/context/ToastContext";
 
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
+function ToastOutlet() {
+  const { Outlet } = useToast();
+  return <Outlet />;
+}
+
 function RootLayoutNav() {
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: Colors.darkBg },
-        animation: "slide_from_right",
-      }}
-    >
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="auth/index" options={{ headerShown: false, animation: "slide_from_bottom" }} />
-      <Stack.Screen name="auth/signup" options={{ headerShown: false, animation: "slide_from_right" }} />
-      <Stack.Screen name="category/[id]" options={{ headerShown: false, animation: "slide_from_bottom" }} />
-      <Stack.Screen name="listing/[id]" options={{ headerShown: false }} />
-      <Stack.Screen name="search" options={{ headerShown: false, animation: "fade" }} />
-      <Stack.Screen name="my-listings" options={{ headerShown: false }} />
-      <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
-      <Stack.Screen name="messages/index" options={{ headerShown: false, animation: "slide_from_bottom" }} />
-      <Stack.Screen name="messages/[id]" options={{ headerShown: false }} />
-    </Stack>
+    <>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: Colors.darkBg },
+          animation: "slide_from_right",
+        }}
+      >
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="auth/index" options={{ headerShown: false, animation: "slide_from_bottom" }} />
+        <Stack.Screen name="auth/signup" options={{ headerShown: false, animation: "slide_from_right" }} />
+        <Stack.Screen name="category/[id]" options={{ headerShown: false, animation: "slide_from_bottom" }} />
+        <Stack.Screen name="listing/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="search" options={{ headerShown: false, animation: "fade" }} />
+        <Stack.Screen name="my-listings" options={{ headerShown: false }} />
+        <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
+        <Stack.Screen name="messages/index" options={{ headerShown: false, animation: "slide_from_bottom" }} />
+        <Stack.Screen name="messages/[id]" options={{ headerShown: false }} />
+      </Stack>
+      <ToastOutlet />
+    </>
   );
 }
 
@@ -68,13 +77,15 @@ export default function RootLayout() {
         <AppContextProvider>
           <MessagingProvider>
             <LocationProvider>
-              <QueryClientProvider client={queryClient}>
-                <GestureHandlerRootView style={{ flex: 1, backgroundColor: Colors.darkBg }}>
-                  <KeyboardProvider>
-                    <RootLayoutNav />
-                  </KeyboardProvider>
-                </GestureHandlerRootView>
-              </QueryClientProvider>
+              <ToastProvider>
+                <QueryClientProvider client={queryClient}>
+                  <GestureHandlerRootView style={{ flex: 1, backgroundColor: Colors.darkBg }}>
+                    <KeyboardProvider>
+                      <RootLayoutNav />
+                    </KeyboardProvider>
+                  </GestureHandlerRootView>
+                </QueryClientProvider>
+              </ToastProvider>
             </LocationProvider>
           </MessagingProvider>
         </AppContextProvider>
