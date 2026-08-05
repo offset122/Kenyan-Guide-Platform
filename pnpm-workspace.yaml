@@ -150,3 +150,7 @@ overrides:
   # drizzle-kit uses esbuild internally on an older version that's vulnerable, this overrides it
   "@esbuild-kit/esm-loader": "npm:tsx@^4.21.0"
   esbuild: "0.27.3"
+  # shell-quote 1.8.3 is blocked by the package firewall; override to latest safe version
+  shell-quote: "1.10.0"
+  # tar 7.5.11 is blocked by the package firewall; override to latest safe version
+  tar: "7.5.22"
