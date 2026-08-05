@@ -30,3 +30,10 @@ defaultBucketID = "replit-objstore-9f30e361-bb46-46ee-9f14-5511955e04d8"
 
 [nix]
 channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+SUPABASE_URL = "https://jmvjwngzzgyreziqhufx.supabase.co"
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imptdmp3bmd6emd5cmV6aXFodWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5MTI1OTMsImV4cCI6MjEwMTQ4ODU5M30.1FyvCIU7qLSOSf4EvbIoFLpitP56pmDssQSnZQH2b_k"
+SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imptdmp3bmd6emd5cmV6aXFodWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NTkxMjU5MywiZXhwIjoyMTAxNDg4NTkzfQ.Uq9XPXGXDs5X-2jnFJbXv4MMXPk8hFGEfSU-JdmsAlI"
