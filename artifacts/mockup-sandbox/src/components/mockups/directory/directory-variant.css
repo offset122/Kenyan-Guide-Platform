@@ -1,0 +1,87 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+.dir-variant-app {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background-color: #0B0E0C;
+  color: #F2F0E9;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.font-serif {
+  font-family: 'Instrument Serif', serif;
+}
+
+.bg-surface {
+  background-color: #141A17;
+}
+
+.bg-surface-elevated {
+  background-color: #1D2622;
+}
+
+.text-accent {
+  color: #E2A856;
+}
+
+.bg-accent {
+  background-color: #E2A856;
+}
+
+.fill-accent {
+  fill: #E2A856;
+}
+
+.glass-nav {
+  background: rgba(20, 26, 23, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding: 0 20px;
+}
+
+.bento-item {
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.bento-large {
+  grid-column: span 2;
+  aspect-ratio: 16 / 9;
+}
+
+.bento-tall {
+  grid-row: span 2;
+  aspect-ratio: 3 / 4;
+}
+
+.bento-square {
+  aspect-ratio: 1 / 1;
+}
+
+.image-dimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(11, 14, 12, 0.95) 0%, rgba(11, 14, 12, 0.4) 50%, rgba(11, 14, 12, 0) 100%);
+  z-index: 10;
+}
