@@ -9,6 +9,7 @@ import {
   Switch,
   Alert,
 } from "react-native";
+import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -19,6 +20,7 @@ import { useAppContext } from "@/context/AppContext";
 import { useMessaging } from "@/context/MessagingContext";
 import { useLocation } from "@/context/LocationContext";
 import { ACCOUNT_TYPES } from "@/constants/data";
+import { useNotifications } from "@/context/NotificationContext";
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
@@ -26,6 +28,7 @@ export default function ProfileScreen() {
   const topPadding = isWeb ? 67 : insets.top;
   const { user, logout, getMyListings, getSavedListings } = useAppContext();
   const { totalUnread, conversations } = useMessaging();
+  const { unreadCount: notifUnread } = useNotifications();
   const { county, permissionGranted, requestLocation } = useLocation();
   const [notificationsOn, setNotificationsOn] = useState(true);
 
@@ -49,7 +52,7 @@ export default function ProfileScreen() {
           </View>
           <Text style={styles.guestTitle}>Join My Kenyan Guide</Text>
           <Text style={styles.guestText}>Create an account to post listings, save favourites, and message providers</Text>
-          <TouchableOpacity style={styles.signInBtn} onPress={() => router.push("/auth/index")}>
+          <TouchableOpacity style={styles.signInBtn} onPress={() => router.push("/auth")}>
             <Text style={styles.signInBtnText}>Sign In</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.registerBtn} onPress={() => router.push("/auth/signup")}>
@@ -72,11 +75,18 @@ export default function ProfileScreen() {
         <View style={styles.profileCard}>
           <View style={styles.avatarRow}>
             <View style={styles.avatarWrap}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarInitials}>
-                  {user.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
-                </Text>
-              </View>
+              <TouchableOpacity style={styles.avatar} onPress={() => router.push("/edit-profile")} activeOpacity={0.85}>
+                {user.avatarUrl ? (
+                  <Image source={{ uri: user.avatarUrl }} style={styles.avatarImage} contentFit="cover" />
+                ) : (
+                  <Text style={styles.avatarInitials}>
+                    {user.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+                  </Text>
+                )}
+                <View style={styles.avatarEditOverlay}>
+                  <Ionicons name="camera" size={14} color="#fff" />
+                </View>
+              </TouchableOpacity>
               <View style={styles.avatarOnline} />
             </View>
             <View style={styles.profileInfo}>
@@ -117,7 +127,7 @@ export default function ProfileScreen() {
               <Text style={styles.statLabel}>Saved</Text>
             </TouchableOpacity>
             <View style={styles.statDivider} />
-            <TouchableOpacity style={styles.statItem} onPress={() => router.push("/messages/index" as any)}>
+            <TouchableOpacity style={styles.statItem} onPress={() => router.push("/messages" as any)}>
               <View style={{ alignItems: "center" }}>
                 <Text style={styles.statValue}>{conversations.length}</Text>
                 {totalUnread > 0 && (
@@ -148,7 +158,18 @@ export default function ProfileScreen() {
             </View>
             <Text style={styles.actionLabel}>My Listings</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.actionCard, { position: "relative" }]} onPress={() => router.push("/messages/index" as any)}>
+          <TouchableOpacity style={[styles.actionCard, { position: "relative" }]} onPress={() => router.push("/notifications" as any)}>
+            <View style={[styles.actionIcon, { backgroundColor: "#1A3A5C" }]}>
+              <Ionicons name="notifications" size={22} color="#5CC8E8" />
+            </View>
+            {notifUnread > 0 && (
+              <View style={styles.actionBadge}>
+                <Text style={styles.actionBadgeText}>{notifUnread > 9 ? "9+" : notifUnread}</Text>
+              </View>
+            )}
+            <Text style={styles.actionLabel}>Alerts</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.actionCard, { position: "relative" }]} onPress={() => router.push("/messages" as any)}>
             <View style={[styles.actionIcon, { backgroundColor: "#3A1A5C" }]}>
               <Ionicons name="chatbubbles" size={22} color="#A87AE8" />
             </View>
@@ -255,8 +276,10 @@ const styles = StyleSheet.create({
   profileCard: { backgroundColor: Colors.darkCard, borderRadius: 20, borderWidth: 1, borderColor: Colors.border, padding: 18, gap: 14 },
   avatarRow: { flexDirection: "row", gap: 14, alignItems: "flex-start" },
   avatarWrap: { position: "relative" },
-  avatar: { width: 62, height: 62, borderRadius: 20, backgroundColor: Colors.green, borderWidth: 2, borderColor: Colors.gold, alignItems: "center", justifyContent: "center" },
-  avatarInitials: { fontFamily: "Inter_700Bold", fontSize: 22, color: Colors.gold },
+  avatar: { width: 68, height: 68, borderRadius: 22, backgroundColor: Colors.green, borderWidth: 2, borderColor: Colors.gold, alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  avatarImage: { width: "100%", height: "100%" },
+  avatarInitials: { fontFamily: "Inter_700Bold", fontSize: 24, color: Colors.gold },
+  avatarEditOverlay: { position: "absolute", bottom: 0, left: 0, right: 0, height: 22, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" },
   avatarOnline: { position: "absolute", bottom: 2, right: 2, width: 14, height: 14, borderRadius: 7, backgroundColor: "#5ADE8A", borderWidth: 2, borderColor: Colors.darkCard },
   profileInfo: { flex: 1, gap: 4 },
   profileName: { fontFamily: "Inter_700Bold", fontSize: 18, color: Colors.textPrimary },

@@ -18,6 +18,7 @@ import * as Haptics from "expo-haptics";
 import { Colors } from "@/constants/colors";
 import { useMessaging, Message } from "@/context/MessagingContext";
 import { useAppContext } from "@/context/AppContext";
+import { useNotifications } from "@/context/NotificationContext";
 
 function TypingIndicator() {
   return (
@@ -68,6 +69,7 @@ export default function ChatScreen() {
 
   const { user } = useAppContext();
   const { conversations, getConversationMessages, sendMessage, markAsRead, isTyping } = useMessaging();
+  const { notifyNewMessage } = useNotifications();
   const flatRef = useRef<FlatList>(null);
 
   const [text, setText] = useState("");
@@ -84,6 +86,18 @@ export default function ChatScreen() {
   useEffect(() => {
     setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 100);
   }, [messages.length, typing]);
+
+  // Track previous message count to detect new bot replies
+  const prevMsgCount = useRef(messages.length);
+  useEffect(() => {
+    if (messages.length > prevMsgCount.current) {
+      const latest = messages[messages.length - 1];
+      if (latest && latest.senderId !== user?.id) {
+        notifyNewMessage(latest.senderName, latest.text, conversationId ?? "");
+      }
+    }
+    prevMsgCount.current = messages.length;
+  }, [messages.length]);
 
   const handleSend = useCallback(async () => {
     if (!text.trim() || !user || !conversation) return;

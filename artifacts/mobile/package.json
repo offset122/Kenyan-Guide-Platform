@@ -58,6 +58,7 @@
   "dependencies": {
     "@nkzw/create-context-hook": "^1.1.0",
     "@supabase/supabase-js": "^2.112.0",
+    "expo-notifications": "~0.31.5",
     "react-native-url-polyfill": "^4.0.0"
   }
 }

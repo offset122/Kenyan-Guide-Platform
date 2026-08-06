@@ -40,7 +40,7 @@ export default function SavedScreen() {
           </View>
           <Text style={styles.guestTitle}>Your Saved Listings</Text>
           <Text style={styles.guestText}>Sign in to bookmark listings and access them here anytime</Text>
-          <TouchableOpacity style={styles.signInBtn} onPress={() => router.push("/auth/index")}>
+          <TouchableOpacity style={styles.signInBtn} onPress={() => router.push("/auth")}>
             <Text style={styles.signInBtnText}>Sign In</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.registerBtn} onPress={() => router.push("/auth/signup")}>

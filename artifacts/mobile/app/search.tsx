@@ -17,7 +17,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 
 import { Colors } from "@/constants/colors";
-import { CATEGORIES } from "@/constants/data";
+import { CATEGORIES, KENYAN_COUNTIES } from "@/constants/data";
 import { useAppContext } from "@/context/AppContext";
 import { ListingCard } from "@/components/ListingCard";
 
@@ -34,6 +34,8 @@ export default function SearchScreen() {
 
   const [query, setQuery] = useState("");
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
+  const [selectedCounty, setSelectedCounty] = useState<string | null>(null);
+  const [showCountyPicker, setShowCountyPicker] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
 
@@ -66,19 +68,20 @@ export default function SearchScreen() {
   }, []);
 
   const results = useMemo(() => {
-    if (!query.trim() && !selectedCat) return [];
+    if (!query.trim() && !selectedCat && !selectedCounty) return [];
     const q = query.toLowerCase().trim();
     return listings.filter((l) => {
       const catMatch = !selectedCat || l.categoryId === selectedCat;
+      const countyMatch = !selectedCounty || l.location.toLowerCase().includes(selectedCounty.toLowerCase());
       const textMatch = !q ||
         l.title.toLowerCase().includes(q) ||
         l.subtitle.toLowerCase().includes(q) ||
         l.description.toLowerCase().includes(q) ||
         l.location.toLowerCase().includes(q) ||
         l.tags.some((t) => t.toLowerCase().includes(q));
-      return catMatch && textMatch;
+      return catMatch && countyMatch && textMatch;
     });
-  }, [query, selectedCat, listings]);
+  }, [query, selectedCat, selectedCounty, listings]);
 
   const handleSearch = (text: string) => {
     setQuery(text);
@@ -105,7 +108,7 @@ export default function SearchScreen() {
     }
   };
 
-  const showSuggestions = !hasSearched && !query.trim() && !selectedCat;
+  const showSuggestions = !hasSearched && !query.trim() && !selectedCat && !selectedCounty;
 
   return (
     <View style={[styles.container, { paddingTop: topPadding }]}>
@@ -147,6 +150,42 @@ export default function SearchScreen() {
           </TouchableOpacity>
         ))}
       </ScrollView>
+
+      {/* Location filter row */}
+      <View style={styles.locationFilterRow}>
+        <TouchableOpacity
+          style={[styles.countyBtn, selectedCounty && styles.countyBtnActive]}
+          onPress={() => setShowCountyPicker((v) => !v)}
+        >
+          <Ionicons name="location-outline" size={14} color={selectedCounty ? Colors.gold : Colors.textMuted} />
+          <Text style={[styles.countyBtnText, selectedCounty && styles.countyBtnTextActive]}>
+            {selectedCounty ?? "All Counties"}
+          </Text>
+          <Ionicons name={showCountyPicker ? "chevron-up" : "chevron-down"} size={14} color={selectedCounty ? Colors.gold : Colors.textMuted} />
+        </TouchableOpacity>
+        {selectedCounty && (
+          <TouchableOpacity style={styles.clearCountyBtn} onPress={() => { setSelectedCounty(null); setShowCountyPicker(false); }}>
+            <Ionicons name="close-circle" size={16} color={Colors.textMuted} />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {showCountyPicker && (
+        <View style={styles.countyDropdown}>
+          <ScrollView style={{ maxHeight: 200 }} showsVerticalScrollIndicator={false}>
+            {KENYAN_COUNTIES.map((c) => (
+              <TouchableOpacity
+                key={c}
+                style={[styles.countyOption, selectedCounty === c && styles.countyOptionActive]}
+                onPress={() => { setSelectedCounty(c); setShowCountyPicker(false); setHasSearched(true); }}
+              >
+                <Text style={[styles.countyOptionText, selectedCounty === c && styles.countyOptionTextActive]}>{c}</Text>
+                {selectedCounty === c && <Ionicons name="checkmark" size={14} color={Colors.gold} />}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       {/* Suggestions / History / Results */}
       {showSuggestions ? (
@@ -243,6 +282,17 @@ const styles = StyleSheet.create({
   catChipActive: { backgroundColor: Colors.green + "40", borderColor: Colors.gold + "50" },
   catChipText: { fontFamily: "Inter_500Medium", fontSize: 12, color: Colors.textSecondary },
   catChipTextActive: { color: Colors.gold },
+  locationFilterRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingBottom: 8, gap: 8 },
+  countyBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: Colors.darkCard, borderWidth: 1, borderColor: Colors.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 },
+  countyBtnActive: { borderColor: Colors.gold + "50", backgroundColor: Colors.green + "30" },
+  countyBtnText: { fontFamily: "Inter_500Medium", fontSize: 13, color: Colors.textMuted },
+  countyBtnTextActive: { color: Colors.gold },
+  clearCountyBtn: { padding: 4 },
+  countyDropdown: { marginHorizontal: 16, marginBottom: 8, backgroundColor: Colors.darkCard, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, overflow: "hidden" },
+  countyOption: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 14, paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: Colors.borderLight },
+  countyOptionActive: { backgroundColor: Colors.green + "30" },
+  countyOptionText: { fontFamily: "Inter_500Medium", fontSize: 14, color: Colors.textSecondary },
+  countyOptionTextActive: { color: Colors.gold },
   suggestionsContent: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 80 },
   sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 20, marginBottom: 12 },
   sectionTitle: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.textMuted, textTransform: "uppercase", letterSpacing: 0.7 },

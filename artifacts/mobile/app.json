@@ -23,7 +23,10 @@
     "android": {
       "permissions": [
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "ACCESS_COARSE_LOCATION",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "POST_NOTIFICATIONS"
       ]
     },
     "web": {
@@ -43,6 +46,16 @@
         {
           "locationAlwaysAndWhenInUsePermission": "My Kenyan Guide uses your location to show nearby listings and services.",
           "locationWhenInUsePermission": "My Kenyan Guide uses your location to show nearby listings and services."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#C9A84C",
+          "sounds": [],
+          "androidMode": "default",
+          "androidCollapsedTitle": "My Kenyan Guide"
         }
       ]
     ],

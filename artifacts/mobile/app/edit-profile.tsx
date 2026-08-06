@@ -10,14 +10,17 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
+import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import * as ImagePicker from "expo-image-picker";
 
 import { Colors } from "@/constants/colors";
 import { useAppContext, AccountType } from "@/context/AppContext";
 import { ACCOUNT_TYPES, KENYAN_COUNTIES } from "@/constants/data";
+import { requestCameraPermission, requestMediaLibraryPermission } from "@/lib/permissions";
 
 export default function EditProfileScreen() {
   const insets = useSafeAreaInsets();
@@ -30,8 +33,47 @@ export default function EditProfileScreen() {
   const [location, setLocation] = useState(user?.location ?? "");
   const [bio, setBio] = useState(user?.bio ?? "");
   const [accountType, setAccountType] = useState<AccountType>(user?.accountType ?? "customer");
+  const [avatarUri, setAvatarUri] = useState<string | undefined>(user?.avatarUrl);
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  const pickAvatar = async () => {
+    const permission = await requestMediaLibraryPermission({ showRationale: true });
+    if (permission !== "granted") return;
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets[0]) {
+        setAvatarUri(result.assets[0].uri);
+        Haptics.selectionAsync();
+      }
+    } catch {}
+  };
+
+  const takeAvatarPhoto = async () => {
+    const permission = await requestCameraPermission({ showRationale: true });
+    if (permission !== "granted") return;
+    try {
+      const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [1, 1], quality: 0.8 });
+      if (!result.canceled && result.assets[0]) {
+        setAvatarUri(result.assets[0].uri);
+        Haptics.selectionAsync();
+      }
+    } catch {}
+  };
+
+  const handleChangeAvatar = () => {
+    Alert.alert("Change Profile Photo", "Choose an option", [
+      { text: "Camera", onPress: takeAvatarPhoto },
+      { text: "Photo Library", onPress: pickAvatar },
+      { text: "Remove Photo", style: "destructive", onPress: () => setAvatarUri(undefined) },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -40,7 +82,7 @@ export default function EditProfileScreen() {
     }
     setLoading(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await updateProfile({ name: name.trim(), phone: phone.trim(), location: location.trim(), bio: bio.trim(), accountType });
+    await updateProfile({ name: name.trim(), phone: phone.trim(), location: location.trim(), bio: bio.trim(), accountType, avatarUrl: avatarUri });
     setLoading(false);
     setSaved(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -60,12 +102,21 @@ export default function EditProfileScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {/* Avatar */}
         <View style={styles.avatarSection}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarInitials}>
-              {(user?.name ?? "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
-            </Text>
-          </View>
-          <Text style={styles.avatarHint}>Your initials are used as your avatar</Text>
+          <TouchableOpacity style={styles.avatarContainer} onPress={handleChangeAvatar} activeOpacity={0.85}>
+            {avatarUri ? (
+              <Image source={{ uri: avatarUri }} style={styles.avatarImage} contentFit="cover" />
+            ) : (
+              <Text style={styles.avatarInitials}>
+                {(user?.name ?? "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+              </Text>
+            )}
+            <View style={styles.avatarCameraOverlay}>
+              <Ionicons name="camera" size={16} color="#fff" />
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleChangeAvatar}>
+            <Text style={styles.avatarHint}>Tap to change photo</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.form}>
@@ -174,9 +225,11 @@ const styles = StyleSheet.create({
   headerTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: Colors.textPrimary },
   content: { paddingHorizontal: 16, gap: 0 },
   avatarSection: { alignItems: "center", paddingVertical: 24, gap: 10 },
-  avatar: { width: 72, height: 72, borderRadius: 22, backgroundColor: Colors.green, borderWidth: 2, borderColor: Colors.gold, alignItems: "center", justifyContent: "center" },
-  avatarInitials: { fontFamily: "Inter_700Bold", fontSize: 26, color: Colors.gold },
-  avatarHint: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted },
+  avatarContainer: { width: 88, height: 88, borderRadius: 28, backgroundColor: Colors.green, borderWidth: 2, borderColor: Colors.gold, alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative" },
+  avatarImage: { width: "100%", height: "100%" },
+  avatarInitials: { fontFamily: "Inter_700Bold", fontSize: 30, color: Colors.gold },
+  avatarCameraOverlay: { position: "absolute", bottom: 0, left: 0, right: 0, height: 28, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" },
+  avatarHint: { fontFamily: "Inter_500Medium", fontSize: 13, color: Colors.gold },
   form: { gap: 16 },
   field: { gap: 8 },
   label: { fontFamily: "Inter_500Medium", fontSize: 13, color: Colors.textSecondary, paddingLeft: 4 },

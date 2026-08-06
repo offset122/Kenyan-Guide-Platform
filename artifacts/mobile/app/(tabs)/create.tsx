@@ -9,7 +9,6 @@ import {
   Platform,
   ActivityIndicator,
   Switch,
-  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -23,6 +22,8 @@ import { Colors } from "@/constants/colors";
 import { CATEGORIES, CATEGORY_TAGS, KENYAN_COUNTIES } from "@/constants/data";
 import { useAppContext } from "@/context/AppContext";
 import { useToast } from "@/context/ToastContext";
+import { useNotifications } from "@/context/NotificationContext";
+import { requestCameraPermission, requestMediaLibraryPermission } from "@/lib/permissions";
 
 const MAX_PHOTOS = 6;
 
@@ -32,6 +33,7 @@ export default function CreateListingScreen() {
   const topPadding = isWeb ? 67 : insets.top;
   const { user, addListing } = useAppContext();
   const { success: toastSuccess, error: toastError } = useToast();
+  const { notifyListingPosted } = useNotifications();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   // Step 1 - Category
@@ -85,12 +87,9 @@ export default function CreateListingScreen() {
       toastError(`Maximum ${MAX_PHOTOS} photos allowed`);
       return;
     }
+    const permission = await requestMediaLibraryPermission({ showRationale: true });
+    if (permission !== "granted") return;
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert("Permission needed", "Please allow access to your photo library.");
-        return;
-      }
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
         allowsEditing: false,
@@ -103,16 +102,16 @@ export default function CreateListingScreen() {
         setPhotos((prev) => [...prev, ...newUris].slice(0, MAX_PHOTOS));
         Haptics.selectionAsync();
       }
-    } catch (e) {
+    } catch {
       toastError("Could not open photo library");
     }
   };
 
   const takePhoto = async () => {
     if (photos.length >= MAX_PHOTOS) { toastError(`Maximum ${MAX_PHOTOS} photos`); return; }
+    const permission = await requestCameraPermission({ showRationale: true });
+    if (permission !== "granted") return;
     try {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== "granted") { Alert.alert("Permission needed", "Allow camera access to take photos."); return; }
       const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.8 });
       if (!result.canceled && result.assets[0]) {
         setPhotos((prev) => [...prev, result.assets[0].uri].slice(0, MAX_PHOTOS));
@@ -131,7 +130,7 @@ export default function CreateListingScreen() {
     setError("");
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      await addListing({
+      const newListing = await addListing({
         categoryId,
         title: title.trim(),
         subtitle: subtitle.trim(),
@@ -145,8 +144,9 @@ export default function CreateListingScreen() {
         badge: undefined,
       });
       toastSuccess("Listing posted successfully!");
+      notifyListingPosted(title.trim(), newListing.id);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.replace("/(tabs)");
+      router.replace("/(tabs)/index");
     } catch (e: any) {
       setError(e.message ?? "Failed to post listing");
       toastError("Failed to post listing");
@@ -166,7 +166,7 @@ export default function CreateListingScreen() {
           </View>
           <Text style={styles.guestTitle}>Sign In to Post</Text>
           <Text style={styles.guestText}>Create a free account to post listings</Text>
-          <TouchableOpacity style={styles.signInBtn} onPress={() => router.push("/auth/index")}>
+          <TouchableOpacity style={styles.signInBtn} onPress={() => router.push("/auth")}>
             <Text style={styles.signInBtnText}>Sign In</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.registerBtn} onPress={() => router.push("/auth/signup")}>

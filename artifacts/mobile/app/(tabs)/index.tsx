@@ -8,7 +8,9 @@ import {
   Platform,
   ActivityIndicator,
   RefreshControl,
+  Dimensions,
 } from "react-native";
+import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -19,9 +21,13 @@ import { CATEGORIES } from "@/constants/data";
 import { useAppContext } from "@/context/AppContext";
 import { useMessaging } from "@/context/MessagingContext";
 import { useLocation } from "@/context/LocationContext";
+import { useNotifications } from "@/context/NotificationContext";
 import { ListingCard } from "@/components/ListingCard";
 import { FeaturedCard } from "@/components/FeaturedCard";
 import { SkeletonCard } from "@/components/SkeletonCard";
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const PRODUCT_CARD_WIDTH = (SCREEN_WIDTH - 48) / 2;
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -29,6 +35,7 @@ export default function HomeScreen() {
   const topPadding = isWeb ? 67 : insets.top;
   const { listings, user, isLoading } = useAppContext();
   const { totalUnread } = useMessaging();
+  const { unreadCount: notifUnread } = useNotifications();
   const { county, area, loading: locLoading, permissionGranted, requestLocation } = useLocation();
   const [refreshing, setRefreshing] = useState(false);
 
@@ -56,6 +63,10 @@ export default function HomeScreen() {
   );
 
   const jobs = useMemo(() => listings.filter((l) => l.categoryId === "jobs" && l.available).slice(0, 3), [listings]);
+  const marketplaceProducts = useMemo(() =>
+    listings.filter((l) => l.categoryId === "products" && l.available && l.photos && l.photos.length > 0).slice(0, 6),
+    [listings]
+  );
 
   return (
     <ScrollView
@@ -88,8 +99,19 @@ export default function HomeScreen() {
             <Ionicons name="search-outline" size={20} color={Colors.textSecondary} />
           </TouchableOpacity>
           <TouchableOpacity
+            style={[styles.notifBtn, notifUnread > 0 && styles.notifBtnActive]}
+            onPress={() => router.push("/notifications" as any)}
+          >
+            <Ionicons name="notifications-outline" size={20} color={notifUnread > 0 ? Colors.gold : Colors.textSecondary} />
+            {notifUnread > 0 && (
+              <View style={styles.notifBadge}>
+                <Text style={styles.notifBadgeText}>{notifUnread > 9 ? "9+" : notifUnread}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
             style={[styles.notifBtn, totalUnread > 0 && styles.notifBtnActive]}
-            onPress={() => router.push("/messages/index" as any)}
+            onPress={() => router.push("/messages" as any)}
           >
             <Ionicons name="chatbubble-ellipses-outline" size={20} color={totalUnread > 0 ? Colors.gold : Colors.textSecondary} />
             {totalUnread > 0 && (
@@ -100,9 +122,11 @@ export default function HomeScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.profileBtn}
-            onPress={() => user ? router.push("/(tabs)/profile" as any) : router.push("/auth/index")}
+            onPress={() => user ? router.push("/(tabs)/profile" as any) : router.push("/auth")}
           >
-            {user ? (
+            {user?.avatarUrl ? (
+              <Image source={{ uri: user.avatarUrl }} style={styles.profileAvatar} contentFit="cover" />
+            ) : user ? (
               <Text style={styles.profileInitials}>
                 {user.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
               </Text>
@@ -229,6 +253,52 @@ export default function HomeScreen() {
         </Animated.View>
       )}
 
+      {/* Marketplace Product Grid */}
+      {marketplaceProducts.length > 0 && (
+        <Animated.View entering={FadeInDown.delay(155).springify()} style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionTitleRow}>
+              <Ionicons name="storefront-outline" size={16} color="#5CC8E8" />
+              <Text style={styles.sectionTitle}>Marketplace</Text>
+            </View>
+            <TouchableOpacity onPress={() => router.push({ pathname: "/category/[id]", params: { id: "products" } })}>
+              <Text style={styles.seeAll}>See all</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.productGrid}>
+            {marketplaceProducts.map((product) => (
+              <TouchableOpacity
+                key={product.id}
+                style={styles.productCard}
+                onPress={() => router.push({ pathname: "/listing/[id]", params: { id: product.id } })}
+                activeOpacity={0.88}
+              >
+                <Image
+                  source={{ uri: product.photos![0] }}
+                  style={styles.productImage}
+                  contentFit="cover"
+                  transition={200}
+                />
+                {product.badge && (
+                  <View style={styles.productBadge}>
+                    <Text style={styles.productBadgeText}>{product.badge}</Text>
+                  </View>
+                )}
+                <View style={styles.productInfo}>
+                  <Text style={styles.productTitle} numberOfLines={1}>{product.title}</Text>
+                  <Text style={styles.productSubtitle} numberOfLines={1}>{product.subtitle}</Text>
+                  {product.price && <Text style={styles.productPrice}>{product.price}</Text>}
+                  <View style={styles.productMeta}>
+                    <Ionicons name="location-outline" size={10} color={Colors.textMuted} />
+                    <Text style={styles.productLocation} numberOfLines={1}>{product.location}</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </Animated.View>
+      )}
+
       {/* Jobs Spotlight */}
       {jobs.length > 0 && (
         <Animated.View entering={FadeInDown.delay(140).springify()} style={styles.section}>
@@ -282,7 +352,7 @@ export default function HomeScreen() {
                 <Text style={styles.ctaBtnText}>Get Started Free</Text>
                 <Ionicons name="arrow-forward" size={16} color={Colors.darkBg} />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.ctaSecondaryBtn} onPress={() => router.push("/auth/index")}>
+              <TouchableOpacity style={styles.ctaSecondaryBtn} onPress={() => router.push("/auth")}>
                 <Text style={styles.ctaSecondaryBtnText}>Sign In</Text>
               </TouchableOpacity>
             </View>
@@ -311,7 +381,8 @@ const styles = StyleSheet.create({
   notifBtnActive: { borderColor: Colors.gold + "50", backgroundColor: Colors.green },
   notifBadge: { position: "absolute", top: -5, right: -5, width: 17, height: 17, borderRadius: 9, backgroundColor: Colors.gold, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: Colors.darkBg },
   notifBadgeText: { fontFamily: "Inter_700Bold", fontSize: 9, color: Colors.darkBg },
-  profileBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: Colors.green, borderWidth: 1.5, borderColor: Colors.gold, alignItems: "center", justifyContent: "center" },
+  profileBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: Colors.green, borderWidth: 1.5, borderColor: Colors.gold, alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  profileAvatar: { width: "100%", height: "100%" },
   profileInitials: { fontFamily: "Inter_700Bold", fontSize: 14, color: Colors.gold },
   searchTouchable: { marginBottom: 14 },
   searchBar: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: Colors.darkCard, borderWidth: 1, borderColor: Colors.border, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 13 },
@@ -340,6 +411,17 @@ const styles = StyleSheet.create({
   locLoadingText: { fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.textMuted },
   featuredRow: { gap: 12 },
   listingsCol: { gap: 12 },
+  productGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  productCard: { width: PRODUCT_CARD_WIDTH, backgroundColor: Colors.darkCard, borderRadius: 14, borderWidth: 1, borderColor: Colors.border, overflow: "hidden" },
+  productImage: { width: "100%", height: 130 },
+  productBadge: { position: "absolute", top: 8, left: 8, backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  productBadgeText: { fontFamily: "Inter_600SemiBold", fontSize: 9, color: Colors.gold },
+  productInfo: { padding: 10, gap: 3 },
+  productTitle: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.textPrimary },
+  productSubtitle: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.textSecondary },
+  productPrice: { fontFamily: "Inter_700Bold", fontSize: 13, color: Colors.gold, marginTop: 2 },
+  productMeta: { flexDirection: "row", alignItems: "center", gap: 2, marginTop: 2 },
+  productLocation: { fontFamily: "Inter_400Regular", fontSize: 10, color: Colors.textMuted, flex: 1 },
   ctaBanner: { backgroundColor: Colors.green, borderRadius: 22, borderWidth: 1, borderColor: Colors.gold + "30", padding: 22, alignItems: "center", gap: 10 },
   ctaIconWrap: { width: 60, height: 60, borderRadius: 20, backgroundColor: Colors.gold + "20", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: Colors.gold + "40" },
   ctaTitle: { fontFamily: "Inter_700Bold", fontSize: 20, color: Colors.textPrimary, textAlign: "center" },

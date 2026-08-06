@@ -87,7 +87,7 @@ export default function MessagesScreen() {
           <Ionicons name="chatbubbles-outline" size={52} color={Colors.textMuted} />
           <Text style={styles.guestTitle}>Sign In to Message</Text>
           <Text style={styles.guestText}>Connect directly with service providers and sellers</Text>
-          <TouchableOpacity style={styles.signInBtn} onPress={() => router.push("/auth/index")}>
+          <TouchableOpacity style={styles.signInBtn} onPress={() => router.push("/auth")}>
             <Text style={styles.signInBtnText}>Sign In</Text>
           </TouchableOpacity>
         </View>

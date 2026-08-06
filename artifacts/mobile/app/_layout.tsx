@@ -22,6 +22,7 @@ import { AppContextProvider } from "@/context/AppContext";
 import { MessagingProvider } from "@/context/MessagingContext";
 import { LocationProvider } from "@/context/LocationContext";
 import { ToastProvider, useToast } from "@/context/ToastContext";
+import { NotificationProvider } from "@/context/NotificationContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -43,15 +44,17 @@ function RootLayoutNav() {
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="auth/index" options={{ headerShown: false, animation: "slide_from_bottom" }} />
+        <Stack.Screen name="auth" options={{ headerShown: false, animation: "slide_from_bottom" }} />
         <Stack.Screen name="auth/signup" options={{ headerShown: false, animation: "slide_from_right" }} />
         <Stack.Screen name="category/[id]" options={{ headerShown: false, animation: "slide_from_bottom" }} />
         <Stack.Screen name="listing/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="search" options={{ headerShown: false, animation: "fade" }} />
         <Stack.Screen name="my-listings" options={{ headerShown: false }} />
         <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
-        <Stack.Screen name="messages/index" options={{ headerShown: false, animation: "slide_from_bottom" }} />
+        <Stack.Screen name="messages" options={{ headerShown: false, animation: "slide_from_bottom" }} />
         <Stack.Screen name="messages/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="listing/edit/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="notifications" options={{ headerShown: false, animation: "slide_from_bottom" }} />
       </Stack>
       <ToastOutlet />
     </>
@@ -79,17 +82,19 @@ export default function RootLayout() {
       <ErrorBoundary>
         <AppContextProvider>
           <MessagingProvider>
-            <LocationProvider>
-              <ToastProvider>
-                <QueryClientProvider client={queryClient}>
-                  <GestureHandlerRootView style={{ flex: 1, backgroundColor: Colors.darkBg }}>
-                    <KeyboardProvider>
-                      <RootLayoutNav />
-                    </KeyboardProvider>
-                  </GestureHandlerRootView>
-                </QueryClientProvider>
-              </ToastProvider>
-            </LocationProvider>
+            <NotificationProvider>
+              <LocationProvider>
+                <ToastProvider>
+                  <QueryClientProvider client={queryClient}>
+                    <GestureHandlerRootView style={{ flex: 1, backgroundColor: Colors.darkBg }}>
+                      <KeyboardProvider>
+                        <RootLayoutNav />
+                      </KeyboardProvider>
+                    </GestureHandlerRootView>
+                  </QueryClientProvider>
+                </ToastProvider>
+              </LocationProvider>
+            </NotificationProvider>
           </MessagingProvider>
         </AppContextProvider>
       </ErrorBoundary>

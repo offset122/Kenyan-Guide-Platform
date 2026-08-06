@@ -21,6 +21,8 @@ import * as Haptics from "expo-haptics";
 import { Colors } from "@/constants/colors";
 import { useAppContext, AccountType } from "@/context/AppContext";
 import { ACCOUNT_TYPES, KENYAN_COUNTIES } from "@/constants/data";
+import { useNotifications } from "@/context/NotificationContext";
+import { requestMediaLibraryPermission } from "@/lib/permissions";
 
 const ACCOUNT_TYPE_META: Record<string, { emoji: string; color: string; desc: string }> = {
   customer: { emoji: "👤", color: "#1A3A5C", desc: "Browse & discover services" },
@@ -35,6 +37,7 @@ export default function SignUpScreen() {
   const isWeb = Platform.OS === "web";
   const topPadding = isWeb ? 67 : insets.top;
   const { register } = useAppContext();
+  const { notifyWelcome } = useNotifications();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   // Step 1
@@ -55,6 +58,8 @@ export default function SignUpScreen() {
   const [error, setError] = useState("");
 
   const pickAvatar = async () => {
+    const permission = await requestMediaLibraryPermission({ showRationale: true });
+    if (permission !== "granted") return;
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
@@ -102,7 +107,8 @@ export default function SignUpScreen() {
     setLoading(false);
     if (result.success) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.replace("/(tabs)");
+      notifyWelcome(name.trim().split(" ")[0]);
+      router.replace("/(tabs)/index");
     } else {
       setError(result.error ?? "Registration failed");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -209,7 +215,7 @@ export default function SignUpScreen() {
                 <View style={styles.divider} />
               </View>
 
-              <TouchableOpacity style={styles.secondaryBtn} onPress={() => router.push("/auth/index")}>
+              <TouchableOpacity style={styles.secondaryBtn} onPress={() => router.push("/auth")}>
                 <Text style={styles.secondaryBtnText}>Sign In</Text>
               </TouchableOpacity>
             </View>

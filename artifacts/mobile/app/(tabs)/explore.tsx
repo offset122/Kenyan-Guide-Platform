@@ -9,7 +9,9 @@ import {
   Modal,
   Pressable,
   RefreshControl,
+  Dimensions,
 } from "react-native";
+import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -20,6 +22,11 @@ import { CATEGORIES } from "@/constants/data";
 import { useAppContext } from "@/context/AppContext";
 import { ListingCard } from "@/components/ListingCard";
 import { SkeletonCard } from "@/components/SkeletonCard";
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const GRID_CARD_WIDTH = (SCREEN_WIDTH - 44) / 2;
+
+const GRID_CATEGORIES = new Set(["products", "realestate"]);
 
 type SortOption = "relevant" | "rating" | "newest" | "price_low" | "price_high";
 type FilterState = { availability: "all" | "available"; verified: boolean };
@@ -49,6 +56,7 @@ export default function ExploreScreen() {
   const [filters, setFilters] = useState<FilterState>({ availability: "all", verified: false });
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -62,6 +70,7 @@ export default function ExploreScreen() {
   }, [listings]);
 
   const activeFilterCount = (filters.availability !== "all" ? 1 : 0) + (filters.verified ? 1 : 0) + (sortBy !== "relevant" ? 1 : 0);
+  const isGridCategory = selectedCategory ? GRID_CATEGORIES.has(selectedCategory) : false;
 
   const filtered = useMemo(() => {
     let result = listings.filter((l) => {
@@ -88,17 +97,27 @@ export default function ExploreScreen() {
           <Text style={styles.title}>Explore</Text>
           <Text style={styles.subtitle}>{filtered.length} listings</Text>
         </View>
-        <TouchableOpacity
-          style={[styles.filterBtn, activeFilterCount > 0 && styles.filterBtnActive]}
-          onPress={() => setShowFilterModal(true)}
-        >
-          <Ionicons name="options-outline" size={18} color={activeFilterCount > 0 ? Colors.gold : Colors.textSecondary} />
-          {activeFilterCount > 0 && (
-            <View style={styles.filterBtnBadge}>
-              <Text style={styles.filterBtnBadgeText}>{activeFilterCount}</Text>
-            </View>
+        <View style={styles.headerActions}>
+          {isGridCategory && (
+            <TouchableOpacity
+              style={styles.viewToggleBtn}
+              onPress={() => setViewMode((v) => v === "list" ? "grid" : "list")}
+            >
+              <Ionicons name={viewMode === "grid" ? "list-outline" : "grid-outline"} size={18} color={Colors.textSecondary} />
+            </TouchableOpacity>
           )}
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterBtn, activeFilterCount > 0 && styles.filterBtnActive]}
+            onPress={() => setShowFilterModal(true)}
+          >
+            <Ionicons name="options-outline" size={18} color={activeFilterCount > 0 ? Colors.gold : Colors.textSecondary} />
+            {activeFilterCount > 0 && (
+              <View style={styles.filterBtnBadge}>
+                <Text style={styles.filterBtnBadgeText}>{activeFilterCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Category Filter */}
@@ -145,11 +164,46 @@ export default function ExploreScreen() {
 
       {/* Listings */}
       <FlatList
+        key={isGridCategory && viewMode === "grid" ? "grid" : "list"}
         data={isLoading ? Array(4).fill(null) : filtered}
         keyExtractor={(item, index) => item?.id ?? `skel-${index}`}
+        numColumns={isGridCategory && viewMode === "grid" ? 2 : 1}
+        columnWrapperStyle={isGridCategory && viewMode === "grid" ? styles.gridRow : undefined}
         renderItem={({ item, index }) =>
           !item
             ? <SkeletonCard />
+            : isGridCategory && viewMode === "grid"
+            ? (
+              <Animated.View entering={FadeInDown.delay(index * 40).springify()} style={styles.gridItem}>
+                <TouchableOpacity
+                  style={styles.gridCard}
+                  onPress={() => router.push({ pathname: "/listing/[id]", params: { id: item.id } })}
+                  activeOpacity={0.88}
+                >
+                  {item.photos && item.photos.length > 0 ? (
+                    <Image source={{ uri: item.photos[0] }} style={styles.gridImage} contentFit="cover" transition={200} />
+                  ) : (
+                    <View style={[styles.gridImage, { backgroundColor: Colors.darkCardElevated, alignItems: "center", justifyContent: "center" }]}>
+                      <Ionicons name="image-outline" size={28} color={Colors.textMuted} />
+                    </View>
+                  )}
+                  {item.badge && (
+                    <View style={styles.gridBadge}>
+                      <Text style={styles.gridBadgeText}>{item.badge}</Text>
+                    </View>
+                  )}
+                  <View style={styles.gridInfo}>
+                    <Text style={styles.gridTitle} numberOfLines={1}>{item.title}</Text>
+                    <Text style={styles.gridSubtitle} numberOfLines={1}>{item.subtitle}</Text>
+                    {item.price && <Text style={styles.gridPrice}>{item.price}</Text>}
+                    <View style={styles.gridMeta}>
+                      <Ionicons name="location-outline" size={10} color={Colors.textMuted} />
+                      <Text style={styles.gridLocation} numberOfLines={1}>{item.location}</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              </Animated.View>
+            )
             : (
               <Animated.View entering={FadeInDown.delay(index * 40).springify()}>
                 <ListingCard listing={item} />
@@ -249,6 +303,20 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.darkBg },
   header: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12, flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" },
+  headerActions: { flexDirection: "row", gap: 8, alignItems: "center" },
+  viewToggleBtn: { width: 42, height: 42, borderRadius: 14, backgroundColor: Colors.darkCard, borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center" },
+  gridRow: { paddingHorizontal: 16, gap: 12, marginBottom: 12 },
+  gridItem: { flex: 1 },
+  gridCard: { backgroundColor: Colors.darkCard, borderRadius: 14, borderWidth: 1, borderColor: Colors.border, overflow: "hidden" },
+  gridImage: { width: "100%", height: 130 },
+  gridBadge: { position: "absolute", top: 8, left: 8, backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  gridBadgeText: { fontFamily: "Inter_600SemiBold", fontSize: 9, color: Colors.gold },
+  gridInfo: { padding: 10, gap: 3 },
+  gridTitle: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.textPrimary },
+  gridSubtitle: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.textSecondary },
+  gridPrice: { fontFamily: "Inter_700Bold", fontSize: 13, color: Colors.gold, marginTop: 2 },
+  gridMeta: { flexDirection: "row", alignItems: "center", gap: 2, marginTop: 2 },
+  gridLocation: { fontFamily: "Inter_400Regular", fontSize: 10, color: Colors.textMuted, flex: 1 },
   title: { fontFamily: "Inter_700Bold", fontSize: 28, color: Colors.textPrimary, letterSpacing: -0.6 },
   subtitle: { fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.textMuted, marginTop: 2 },
   filterBtn: { width: 42, height: 42, borderRadius: 14, backgroundColor: Colors.darkCard, borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center", position: "relative" },

@@ -41,7 +41,7 @@ export default function SignInScreen() {
     const result = await login(email.trim(), password);
     setLoading(false);
     if (result.success) {
-      router.replace("/(tabs)");
+      router.replace("/(tabs)/index");
     } else {
       setError(result.error ?? "Login failed");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);

@@ -79,6 +79,12 @@ function ListingManageCard({ listing, onDelete, onToggle }: {
         <View style={styles.actionBtns}>
           <TouchableOpacity
             style={styles.actionBtn}
+            onPress={() => router.push({ pathname: "/listing/edit/[id]", params: { id: listing.id } })}
+          >
+            <Ionicons name="pencil-outline" size={20} color={Colors.gold} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionBtn}
             onPress={() => { Haptics.selectionAsync(); onToggle(listing.id); }}
           >
             <Ionicons name={listing.available ? "pause-circle-outline" : "play-circle-outline"} size={20} color={Colors.gold} />

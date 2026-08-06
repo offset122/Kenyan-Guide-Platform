@@ -1,6 +1,7 @@
 import createContextHook from "@nkzw/create-context-hook";
 import * as Location from "expo-location";
 import { useCallback, useEffect, useState } from "react";
+import { requestLocationPermission } from "@/lib/permissions";
 
 export type LocationState = {
   coords: { latitude: number; longitude: number } | null;
@@ -44,33 +45,23 @@ const [LocationProvider, useLocation] = createContextHook(() => {
 
   const requestLocation = useCallback(async () => {
     setState((prev) => ({ ...prev, loading: true, error: null }));
+    const result = await requestLocationPermission({ showRationale: true });
+    if (result !== "granted") {
+      setState((prev) => ({ ...prev, loading: false, error: "Permission denied", permissionGranted: false }));
+      return;
+    }
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        setState((prev) => ({ ...prev, loading: false, error: "Permission denied", permissionGranted: false }));
-        return;
-      }
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       const { latitude, longitude } = loc.coords;
       const county = getCountyFromCoords(latitude, longitude);
-
-      // Reverse geocode for area name
       let area: string | null = null;
       try {
         const [geocoded] = await Location.reverseGeocodeAsync({ latitude, longitude });
         area = geocoded?.district ?? geocoded?.subregion ?? geocoded?.city ?? null;
-      } catch (e) {}
-
-      setState({
-        coords: { latitude, longitude },
-        county,
-        area,
-        loading: false,
-        error: null,
-        permissionGranted: true,
-      });
+      } catch {}
+      setState({ coords: { latitude, longitude }, county, area, loading: false, error: null, permissionGranted: true });
       setWatching(true);
-    } catch (e) {
+    } catch {
       setState((prev) => ({ ...prev, loading: false, error: "Could not get location" }));
     }
   }, []);

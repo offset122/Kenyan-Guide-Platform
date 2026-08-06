@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,12 @@ import {
   Platform,
   Share,
   Alert,
+  Dimensions,
+  FlatList,
+  TextInput,
+  ActivityIndicator,
 } from "react-native";
+import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
@@ -20,6 +25,10 @@ import { Colors } from "@/constants/colors";
 import { CATEGORIES } from "@/constants/data";
 import { useAppContext } from "@/context/AppContext";
 import { useMessaging } from "@/context/MessagingContext";
+import { useToast } from "@/context/ToastContext";
+import { useNotifications } from "@/context/NotificationContext";
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 export default function ListingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -27,12 +36,22 @@ export default function ListingDetailScreen() {
   const isWeb = Platform.OS === "web";
   const topPadding = isWeb ? 67 : insets.top;
   const bottomPadding = isWeb ? 34 : insets.bottom;
-  const { listings, isSaved, toggleSaved, user, deleteListing } = useAppContext();
+  const { listings, isSaved, toggleSaved, user, deleteListing, addReview, getReviews, hasReviewed } = useAppContext();
   const { getOrCreateConversation, totalUnread } = useMessaging();
+  const { success: toastSuccess, error: toastError } = useToast();
+  const { notifyListingSaved, notifyNewReview } = useNotifications();
 
   const listing = listings.find((l) => l.id === id);
   const saved = listing ? isSaved(listing.id) : false;
   const isOwner = user && listing && user.id === listing.userId;
+  const [activePhotoIdx, setActivePhotoIdx] = useState(0);
+  const hasPhotos = !!(listing?.photos && listing.photos.length > 0);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const listingReviews = listing ? getReviews(listing.id) : [];
+  const alreadyReviewed = listing ? hasReviewed(listing.id) : false;
 
   if (!listing) {
     return (
@@ -63,7 +82,7 @@ export default function ListingDetailScreen() {
   };
 
   const handleMessage = () => {
-    if (!user) { router.push("/auth/index"); return; }
+    if (!user) { router.push("/auth"); return; }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const convId = getOrCreateConversation(
       listing.id,
@@ -88,9 +107,11 @@ export default function ListingDetailScreen() {
   };
 
   const handleSave = () => {
-    if (!user) { router.push("/auth/index"); return; }
+    if (!user) { router.push("/auth"); return; }
     Haptics.selectionAsync();
+    const wasSaved = saved;
     toggleSaved(listing.id);
+    if (!wasSaved) notifyListingSaved(listing.title);
   };
 
   const handleDelete = () => {
@@ -124,8 +145,44 @@ export default function ListingDetailScreen() {
       </View>
 
       <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: bottomPadding + 110 }]} showsVerticalScrollIndicator={false}>
+        {/* Photo Gallery */}
+        {hasPhotos && (
+          <Animated.View entering={FadeInDown.springify()} style={styles.gallerySection}>
+            <FlatList
+              data={listing!.photos}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(_, i) => String(i)}
+              onMomentumScrollEnd={(e) => {
+                const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+                setActivePhotoIdx(idx);
+              }}
+              renderItem={({ item }) => (
+                <Image
+                  source={{ uri: item }}
+                  style={{ width: SCREEN_WIDTH, height: 260 }}
+                  contentFit="cover"
+                  transition={200}
+                />
+              )}
+            />
+            {listing!.photos!.length > 1 && (
+              <View style={styles.photoDots}>
+                {listing!.photos!.map((_, i) => (
+                  <View key={i} style={[styles.photoDot, i === activePhotoIdx && styles.photoDotActive]} />
+                ))}
+              </View>
+            )}
+            <View style={styles.photoCountOverlay}>
+              <Ionicons name="images-outline" size={12} color="#fff" />
+              <Text style={styles.photoCountText}>{activePhotoIdx + 1}/{listing!.photos!.length}</Text>
+            </View>
+          </Animated.View>
+        )}
+
         {/* Category banner */}
-        <Animated.View entering={FadeInDown.springify()}>
+        <Animated.View entering={FadeInDown.delay(hasPhotos ? 40 : 0).springify()}>
           <View style={[styles.categoryBanner, { backgroundColor: category?.color ?? Colors.darkCard }]}>
             <View style={styles.categoryIconWrap}>
               {category ? (
@@ -228,10 +285,14 @@ export default function ListingDetailScreen() {
             <Text style={styles.sectionTitle}>Contact</Text>
             <View style={styles.contactCard}>
               <View style={styles.contactIconWrap}>
-                <Ionicons name="call" size={18} color={Colors.gold} />
+                {listing.userAvatarUrl ? (
+                  <Image source={{ uri: listing.userAvatarUrl }} style={styles.contactAvatar} contentFit="cover" />
+                ) : (
+                  <Ionicons name="call" size={18} color={Colors.gold} />
+                )}
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.contactLabel}>Phone</Text>
+                <Text style={styles.contactLabel}>{listing.userName}</Text>
                 <Text style={styles.contactValue}>{listing.phone}</Text>
               </View>
               <TouchableOpacity style={styles.contactCallBtn} onPress={handleCall}>
@@ -253,11 +314,125 @@ export default function ListingDetailScreen() {
           <Text style={styles.safetyText}>Always meet in public for transactions. Never pay in advance without verifying.</Text>
         </View>
 
+        {/* Reviews */}
+        <Animated.View entering={FadeInDown.delay(260).springify()}>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Reviews ({listingReviews.length})</Text>
+
+            {listingReviews.length > 0 && (
+              <View style={styles.reviewsList}>
+                {listingReviews.map((r) => (
+                  <View key={r.id} style={styles.reviewCard}>
+                    <View style={styles.reviewHeader}>
+                      <View style={styles.reviewAvatar}>
+                        {r.userAvatarUrl ? (
+                          <Image source={{ uri: r.userAvatarUrl }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
+                        ) : (
+                          <Text style={styles.reviewAvatarText}>
+                            {r.userName.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+                          </Text>
+                        )}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.reviewName}>{r.userName}</Text>
+                        <View style={styles.reviewStars}>
+                          {[1,2,3,4,5].map((s) => (
+                            <Ionicons key={s} name={s <= r.rating ? "star" : "star-outline"} size={12} color={Colors.gold} />
+                          ))}
+                          <Text style={styles.reviewDate}>
+                            {new Date(r.createdAt).toLocaleDateString("en-KE", { day: "numeric", month: "short", year: "numeric" })}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                    {r.comment ? <Text style={styles.reviewComment}>{r.comment}</Text> : null}
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {!isOwner && user && !alreadyReviewed && (
+              !showReviewForm ? (
+                <TouchableOpacity style={styles.writeReviewBtn} onPress={() => setShowReviewForm(true)}>
+                  <Ionicons name="star-outline" size={16} color={Colors.gold} />
+                  <Text style={styles.writeReviewBtnText}>Write a Review</Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.reviewForm}>
+                  <Text style={styles.reviewFormLabel}>Your Rating</Text>
+                  <View style={styles.starPicker}>
+                    {[1,2,3,4,5].map((s) => (
+                      <TouchableOpacity key={s} onPress={() => { setReviewRating(s); Haptics.selectionAsync(); }}>
+                        <Ionicons name={s <= reviewRating ? "star" : "star-outline"} size={32} color={Colors.gold} />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  <View style={styles.reviewInputWrap}>
+                    <TextInput
+                      style={styles.reviewInput}
+                      value={reviewComment}
+                      onChangeText={setReviewComment}
+                      placeholder="Share your experience (optional)"
+                      placeholderTextColor={Colors.textMuted}
+                      multiline
+                      maxLength={300}
+                    />
+                  </View>
+                  <View style={styles.reviewFormBtns}>
+                    <TouchableOpacity style={styles.reviewCancelBtn} onPress={() => { setShowReviewForm(false); setReviewRating(0); setReviewComment(""); }}>
+                      <Text style={styles.reviewCancelBtnText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.reviewSubmitBtn, (reviewRating === 0 || reviewLoading) && { opacity: 0.5 }]}
+                      disabled={reviewRating === 0 || reviewLoading}
+                      onPress={async () => {
+                        setReviewLoading(true);
+                        const result = await addReview(listing!.id, reviewRating, reviewComment);
+                        setReviewLoading(false);
+                        if (result.success) {
+                          toastSuccess("Review submitted!");
+                          notifyNewReview(listing!.title, user!.name, listing!.id);
+                          setShowReviewForm(false);
+                          setReviewRating(0);
+                          setReviewComment("");
+                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        } else {
+                          toastError(result.error ?? "Failed to submit review");
+                        }
+                      }}
+                    >
+                      {reviewLoading ? <ActivityIndicator size="small" color={Colors.darkBg} /> : <Text style={styles.reviewSubmitBtnText}>Submit</Text>}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )
+            )}
+
+            {alreadyReviewed && (
+              <View style={styles.alreadyReviewedBadge}>
+                <Ionicons name="checkmark-circle" size={14} color="#5ADE8A" />
+                <Text style={styles.alreadyReviewedText}>You reviewed this listing</Text>
+              </View>
+            )}
+
+            {!user && (
+              <TouchableOpacity style={styles.writeReviewBtn} onPress={() => router.push("/auth")}>
+                <Ionicons name="star-outline" size={16} color={Colors.gold} />
+                <Text style={styles.writeReviewBtnText}>Sign in to write a review</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </Animated.View>
+
         {/* Owner Actions */}
         {isOwner && (
           <View style={styles.ownerSection}>
             <Text style={styles.ownerLabel}>You own this listing</Text>
             <View style={styles.ownerBtns}>
+              <TouchableOpacity style={styles.ownerBtn} onPress={() => router.push({ pathname: "/listing/edit/[id]", params: { id: listing!.id } })}>
+                <Ionicons name="pencil-outline" size={16} color={Colors.gold} />
+                <Text style={styles.ownerBtnText}>Edit</Text>
+              </TouchableOpacity>
               <TouchableOpacity style={styles.ownerBtn} onPress={() => router.push("/my-listings")}>
                 <Ionicons name="list-outline" size={16} color={Colors.gold} />
                 <Text style={styles.ownerBtnText}>Manage</Text>
@@ -292,6 +467,17 @@ export default function ListingDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  gallerySection: { marginBottom: 14, position: "relative" },
+  photoDots: { flexDirection: "row", justifyContent: "center", gap: 5, marginTop: 8 },
+  photoDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.border },
+  photoDotActive: { backgroundColor: Colors.gold, width: 18 },
+  photoCountOverlay: {
+    position: "absolute", bottom: 18, right: 14,
+    flexDirection: "row", alignItems: "center", gap: 4,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
+  },
+  photoCountText: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: "#fff" },
   container: { flex: 1, backgroundColor: Colors.darkBg },
   nav: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingVertical: 10 },
   navBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: Colors.darkCard, borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center" },
@@ -327,7 +513,8 @@ const styles = StyleSheet.create({
   tagChip: { backgroundColor: Colors.darkCard, borderWidth: 1, borderColor: Colors.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 },
   tagText: { fontFamily: "Inter_500Medium", fontSize: 13, color: Colors.textSecondary },
   contactCard: { backgroundColor: Colors.darkCard, borderRadius: 14, borderWidth: 1, borderColor: Colors.border, padding: 14, flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 8 },
-  contactIconWrap: { width: 38, height: 38, borderRadius: 12, backgroundColor: Colors.green + "40", alignItems: "center", justifyContent: "center" },
+  contactIconWrap: { width: 42, height: 42, borderRadius: 14, backgroundColor: Colors.green + "40", alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  contactAvatar: { width: "100%", height: "100%" },
   contactLabel: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.textMuted },
   contactValue: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: Colors.textPrimary },
   contactCallBtn: { backgroundColor: Colors.gold + "20", borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: Colors.gold + "40" },
@@ -337,6 +524,29 @@ const styles = StyleSheet.create({
   contactDate: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted },
   safetyBox: { flexDirection: "row", gap: 8, backgroundColor: Colors.darkCard, borderRadius: 12, padding: 12, marginBottom: 20, borderWidth: 1, borderColor: Colors.border },
   safetyText: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted, flex: 1, lineHeight: 18 },
+  reviewsList: { gap: 10, marginBottom: 12 },
+  reviewCard: { backgroundColor: Colors.darkCard, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, padding: 12, gap: 8 },
+  reviewHeader: { flexDirection: "row", gap: 10, alignItems: "center" },
+  reviewAvatar: { width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.green, borderWidth: 1, borderColor: Colors.gold + "40", alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  reviewAvatarText: { fontFamily: "Inter_700Bold", fontSize: 13, color: Colors.gold },
+  reviewName: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.textPrimary },
+  reviewStars: { flexDirection: "row", alignItems: "center", gap: 2, marginTop: 2 },
+  reviewDate: { fontFamily: "Inter_400Regular", fontSize: 10, color: Colors.textMuted, marginLeft: 6 },
+  reviewComment: { fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.textSecondary, lineHeight: 19 },
+  writeReviewBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1, borderColor: Colors.gold + "40", borderRadius: 12, paddingVertical: 12, backgroundColor: Colors.gold + "10" },
+  writeReviewBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.gold },
+  reviewForm: { backgroundColor: Colors.darkCard, borderRadius: 14, borderWidth: 1, borderColor: Colors.border, padding: 14, gap: 12 },
+  reviewFormLabel: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.textSecondary },
+  starPicker: { flexDirection: "row", gap: 8 },
+  reviewInputWrap: { backgroundColor: Colors.darkBg, borderRadius: 10, borderWidth: 1, borderColor: Colors.border, padding: 12 },
+  reviewInput: { fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.textPrimary, minHeight: 70, textAlignVertical: "top" },
+  reviewFormBtns: { flexDirection: "row", gap: 10 },
+  reviewCancelBtn: { flex: 1, borderWidth: 1, borderColor: Colors.border, borderRadius: 10, paddingVertical: 11, alignItems: "center" },
+  reviewCancelBtnText: { fontFamily: "Inter_500Medium", fontSize: 14, color: Colors.textMuted },
+  reviewSubmitBtn: { flex: 1, backgroundColor: Colors.gold, borderRadius: 10, paddingVertical: 11, alignItems: "center" },
+  reviewSubmitBtnText: { fontFamily: "Inter_700Bold", fontSize: 14, color: Colors.darkBg },
+  alreadyReviewedBadge: { flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 10, paddingHorizontal: 14, backgroundColor: "rgba(90,222,138,0.08)", borderRadius: 10, borderWidth: 1, borderColor: "rgba(90,222,138,0.2)" },
+  alreadyReviewedText: { fontFamily: "Inter_500Medium", fontSize: 13, color: "#5ADE8A" },
   ownerSection: { backgroundColor: Colors.darkCard, borderRadius: 14, borderWidth: 1, borderColor: Colors.gold + "30", padding: 14, gap: 12, marginBottom: 16 },
   ownerLabel: { fontFamily: "Inter_500Medium", fontSize: 13, color: Colors.gold, textAlign: "center" },
   ownerBtns: { flexDirection: "row", gap: 10 },
