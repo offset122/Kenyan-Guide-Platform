@@ -108,7 +108,7 @@ export default function SignUpScreen() {
     if (result.success) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       notifyWelcome(name.trim().split(" ")[0]);
-      router.replace("/(tabs)/index");
+      router.replace("/(tabs)");
     } else {
       setError(result.error ?? "Registration failed");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);

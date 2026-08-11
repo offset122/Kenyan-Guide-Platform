@@ -26,6 +26,8 @@ import { useNotifications } from "@/context/NotificationContext";
 import { requestCameraPermission, requestMediaLibraryPermission } from "@/lib/permissions";
 
 const MAX_PHOTOS = 6;
+  const CATEGORY2_MAX_PHOTOS = 3;
+  const CATEGORY2_MAX_DESC = 200;
 
 export default function CreateListingScreen() {
   const insets = useSafeAreaInsets();
@@ -43,22 +45,92 @@ export default function CreateListingScreen() {
   const [subtitle, setSubtitle] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
+  const [county, setCounty] = useState("");
+  const [constituency, setConstituency] = useState("");
+  const [areaCode, setAreaCode] = useState("");
   const [price, setPrice] = useState("");
   const [phone, setPhone] = useState(user?.phone ?? "+254 ");
+  const [whatsapp, setWhatsapp] = useState("");
+  const [email, setEmail] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [available, setAvailable] = useState(true);
+  // Category-specific fields
+  const [serviceType, setServiceType] = useState("");
+  const [charges, setCharges] = useState("");
+  const [onSite, setOnSite] = useState(false);
+  const [keywords, setKeywords] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [foodCategory, setFoodCategory] = useState("");
+  const [delivery, setDelivery] = useState(false);
+  const [priceRange, setPriceRange] = useState("");
+  const [facilityType, setFacilityType] = useState("");
+  const [available247, setAvailable247] = useState(false);
+  const [propertyType, setPropertyType] = useState("");
+  const [listingFor, setListingFor] = useState("");
+  const [vehicleType, setVehicleType] = useState("");
+  const [condition, setCondition] = useState("");
+  const [jobType, setJobType] = useState("");
+  const [employmentType, setEmploymentType] = useState("");
+  const [salary, setSalary] = useState("");
+  const [education, setEducation] = useState("");
+  const [experience, setExperience] = useState("");
+  const [profilePhoto, setProfilePhoto] = useState("");
+  const [cvUrl, setCvUrl] = useState("");
+  const [eventCategory, setEventCategory] = useState("");
+  const [eventDate, setEventDate] = useState("");
+  const [eventTime, setEventTime] = useState("");
+  const [venue, setVenue] = useState("");
+  const [ticketPrice, setTicketPrice] = useState("");
   // Step 3 - Photos
   const [photos, setPhotos] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const availableTags = categoryId ? (CATEGORY_TAGS[categoryId] ?? []) : [];
+  const isServicesCategory = categoryId === "services";
+  const isFoodCategory = categoryId === "food";
+  const isEmergencyCategory = categoryId === "emergency";
+  const isRealEstateCategory = categoryId === "realestate";
+  const isAutomobilesCategory = categoryId === "automobiles";
+  const isJobsCategory = categoryId === "jobs";
+  const isEventsCategory = categoryId === "events";
+  const maxPhotos = isServicesCategory ? CATEGORY2_MAX_PHOTOS : MAX_PHOTOS;
+  const descMaxLength = isServicesCategory || isEmergencyCategory || isFoodCategory ? 200 : isRealEstateCategory || isAutomobilesCategory || isEventsCategory || (isJobsCategory && jobType === "looking") ? 300 : isJobsCategory && jobType === "hiring" ? 500 : 600;
 
   const toggleTag = (tag: string) => {
     setSelectedTags((prev) =>
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag].slice(0, 6)
     );
   };
+
+  React.useEffect(() => {
+    setServiceType("");
+    setCharges("");
+    setOnSite(false);
+    setKeywords("");
+    setLogoUrl("");
+    setFoodCategory("");
+    setDelivery(false);
+    setPriceRange("");
+    setFacilityType("");
+    setAvailable247(false);
+    setPropertyType("");
+    setListingFor("");
+    setVehicleType("");
+    setCondition("");
+    setJobType("");
+    setEmploymentType("");
+    setSalary("");
+    setEducation("");
+    setExperience("");
+    setProfilePhoto("");
+    setCvUrl("");
+    setEventCategory("");
+    setEventDate("");
+    setEventTime("");
+    setVenue("");
+    setTicketPrice("");
+  }, [categoryId]);
 
   const validateStep1 = () => {
     if (!categoryId) return "Please select a category";
@@ -71,6 +143,44 @@ export default function CreateListingScreen() {
     if (!description.trim() || description.trim().length < 20) return "Description must be at least 20 characters";
     if (!location.trim()) return "Location is required";
     if (!phone.trim() || phone.replace(/\s/g, "").length < 9) return "Valid phone number is required";
+    if (isServicesCategory) {
+      if (!serviceType.trim()) return "Service type is required for service businesses";
+      if (!charges.trim()) return "Charges are required for service businesses";
+      if (!keywords.trim()) return "At least one keyword is required for service businesses";
+      if (!logoUrl.trim()) return "Business logo or cover photo is required";
+    }
+    if (isFoodCategory) {
+      if (!foodCategory.trim()) return "Food category is required";
+      if (!priceRange.trim()) return "Price range is required";
+    }
+    if (isEmergencyCategory) {
+      if (!facilityType.trim()) return "Facility type is required";
+    }
+    if (isRealEstateCategory) {
+      if (!propertyType.trim()) return "Property type is required";
+      if (!listingFor.trim()) return "Listing type (Rent/Sale) is required";
+    }
+    if (isAutomobilesCategory) {
+      if (!vehicleType.trim()) return "Vehicle type is required";
+      if (!condition.trim()) return "Condition is required";
+    }
+    if (isJobsCategory) {
+      if (!jobType.trim()) return "Job type is required";
+      if (jobType === "hiring") {
+        if (!employmentType.trim()) return "Employment type is required";
+      }
+      if (jobType === "looking") {
+        if (!education.trim()) return "Education level is required";
+        if (!experience.trim()) return "Years of experience is required";
+      }
+    }
+    if (isEventsCategory) {
+      if (!eventCategory.trim()) return "Event category is required";
+      if (!eventDate.trim()) return "Event date is required";
+      if (!eventTime.trim()) return "Event time is required";
+      if (!venue.trim()) return "Venue is required";
+      if (!ticketPrice.trim()) return "Ticket price is required";
+    }
     return null;
   };
 
@@ -83,8 +193,8 @@ export default function CreateListingScreen() {
   };
 
   const pickPhoto = async () => {
-    if (photos.length >= MAX_PHOTOS) {
-      toastError(`Maximum ${MAX_PHOTOS} photos allowed`);
+    if (photos.length >= maxPhotos) {
+      toastError(`Maximum ${maxPhotos} photos allowed`);
       return;
     }
     const permission = await requestMediaLibraryPermission({ showRationale: true });
@@ -95,11 +205,11 @@ export default function CreateListingScreen() {
         allowsEditing: false,
         quality: 0.8,
         allowsMultipleSelection: true,
-        selectionLimit: MAX_PHOTOS - photos.length,
+        selectionLimit: maxPhotos - photos.length,
       });
       if (!result.canceled) {
         const newUris = result.assets.map((a) => a.uri);
-        setPhotos((prev) => [...prev, ...newUris].slice(0, MAX_PHOTOS));
+        setPhotos((prev) => [...prev, ...newUris].slice(0, maxPhotos));
         Haptics.selectionAsync();
       }
     } catch {
@@ -108,13 +218,13 @@ export default function CreateListingScreen() {
   };
 
   const takePhoto = async () => {
-    if (photos.length >= MAX_PHOTOS) { toastError(`Maximum ${MAX_PHOTOS} photos`); return; }
+    if (photos.length >= maxPhotos) { toastError(`Maximum ${maxPhotos} photos`); return; }
     const permission = await requestCameraPermission({ showRationale: true });
     if (permission !== "granted") return;
     try {
       const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.8 });
       if (!result.canceled && result.assets[0]) {
-        setPhotos((prev) => [...prev, result.assets[0].uri].slice(0, MAX_PHOTOS));
+        setPhotos((prev) => [...prev, result.assets[0].uri].slice(0, maxPhotos));
         Haptics.selectionAsync();
       }
     } catch {}
@@ -136,17 +246,48 @@ export default function CreateListingScreen() {
         subtitle: subtitle.trim(),
         description: description.trim(),
         location: location.trim(),
+        county: county.trim(),
+        constituency: constituency.trim(),
+        areaCode: areaCode.trim(),
         price: price.trim(),
         phone: phone.trim(),
+        whatsapp: whatsapp.trim(),
+        email: email.trim(),
+        logoUrl: logoUrl.trim(),
         tags: selectedTags,
         available,
+        serviceType: isServicesCategory ? serviceType.trim() : "",
+        charges: isServicesCategory ? charges.trim() : "",
+        onSite: isServicesCategory ? onSite : false,
+        keywords: isServicesCategory ? keywords.split(",").map((k) => k.trim()).filter(Boolean) : [],
+        foodCategory: isFoodCategory ? foodCategory.trim() : "",
+        delivery: isFoodCategory ? delivery : false,
+        priceRange: isFoodCategory ? priceRange.trim() : "",
+        facilityType: isEmergencyCategory ? facilityType.trim() : "",
+        available247: isEmergencyCategory ? available247 : false,
+        propertyType: isRealEstateCategory ? propertyType.trim() : "",
+        listingFor: isRealEstateCategory ? listingFor.trim() : "",
+        vehicleType: isAutomobilesCategory ? vehicleType.trim() : "",
+        condition: isAutomobilesCategory ? condition.trim() : "",
+        jobType: isJobsCategory ? jobType.trim() : "",
+        employmentType: isJobsCategory && jobType === "hiring" ? employmentType.trim() : "",
+        salary: isJobsCategory ? salary.trim() : "",
+        education: isJobsCategory && jobType === "looking" ? education.trim() : "",
+        experience: isJobsCategory && jobType === "looking" ? experience.trim() : "",
+        profilePhoto: isJobsCategory && jobType === "looking" ? profilePhoto.trim() : "",
+        cvUrl: isJobsCategory && jobType === "looking" ? cvUrl.trim() : "",
+        eventCategory: isEventsCategory ? eventCategory.trim() : "",
+        eventDate: isEventsCategory ? eventDate.trim() : "",
+        eventTime: isEventsCategory ? eventTime.trim() : "",
+        venue: isEventsCategory ? venue.trim() : "",
+        ticketPrice: isEventsCategory ? ticketPrice.trim() : "",
         photos,
         badge: undefined,
       });
       toastSuccess("Listing posted successfully!");
       notifyListingPosted(title.trim(), newListing.id);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.replace("/(tabs)/index");
+       router.replace("/(tabs)");
     } catch (e: any) {
       setError(e.message ?? "Failed to post listing");
       toastError("Failed to post listing");
@@ -246,7 +387,7 @@ export default function CreateListingScreen() {
               <View style={styles.catBanner}>
                 <View style={[styles.catBannerIcon, { backgroundColor: selectedCategory.color }]}>
                   {selectedCategory.iconSet === "MaterialIcons"
-                    ? /* @ts-ignore */ <MaterialIcons name={selectedCategory.icon} size={18} color={selectedCategory.accentColor} />
+                    ? <MaterialIcons name={selectedCategory.icon as any} size={18} color={selectedCategory.accentColor} />
                     : <Ionicons name={selectedCategory.icon as any} size={18} color={selectedCategory.accentColor} />
                   }
                 </View>
@@ -258,70 +399,226 @@ export default function CreateListingScreen() {
             <Text style={styles.stepSubtitle}>Fill in the information about your listing</Text>
 
             <View style={styles.form}>
-              <Field label="Title *" icon="text-outline" value={title} onChangeText={setTitle} placeholder={categoryId === "products" ? "e.g. Samsung Galaxy S24 – 256GB" : categoryId === "jobs" ? "e.g. Senior Software Engineer" : "e.g. James Mwangi – Master Plumber"} />
-              <Field label="Short Description *" icon="document-text-outline" value={subtitle} onChangeText={setSubtitle} placeholder={categoryId === "realestate" ? "e.g. 3BR Apartment, Kileleshwa" : "e.g. Certified electrician, 10 years experience"} />
+              <Field label={isServicesCategory ? "Business Name *" : isJobsCategory && jobType === "looking" ? "Full Name *" : isEventsCategory ? "Event Title *" : isEmergencyCategory ? "Name of Facility or Service *" : isRealEstateCategory ? "Property Title *" : isAutomobilesCategory ? "Title *" : "Title *"} icon="text-outline" value={title} onChangeText={setTitle} placeholder={isServicesCategory ? "e.g. ABC Surveyors, Prime Cleaning Services" : categoryId === "products" ? "e.g. Samsung Galaxy S24 – 256GB" : categoryId === "jobs" && jobType === "hiring" ? "e.g. Senior Software Engineer" : "e.g. James Mwangi – Master Plumber"} />
+              <Field label={isJobsCategory && jobType === "hiring" ? "Company Name *" : isJobsCategory && jobType === "looking" ? "Profession *" : "Short Description *"} icon="document-text-outline" value={subtitle} onChangeText={setSubtitle} placeholder={isJobsCategory && jobType === "looking" ? "e.g. Accountant, Chef, Driver, Electrician" : categoryId === "realestate" ? "e.g. 3BR Apartment, Kileleshwa" : "e.g. Certified electrician, 10 years experience"} />
 
-              <View style={styles.field}>
-                <Text style={styles.label}>Full Description *</Text>
-                <View style={[styles.inputWrap, { alignItems: "flex-start", paddingTop: 12, paddingBottom: 12 }]}>
-                  <TextInput
-                    style={[styles.input, { height: 100, textAlignVertical: "top" }]}
-                    value={description}
-                    onChangeText={setDescription}
-                    placeholder="Describe your listing in detail. Include what makes it special, experience, conditions, etc."
-                    placeholderTextColor={Colors.textMuted}
-                    multiline
-                    maxLength={600}
-                  />
-                </View>
-                <Text style={styles.charCount}>{description.length}/600</Text>
-              </View>
-
-              <View style={styles.row2}>
-                <View style={[styles.field, { flex: 1 }]}>
-                  <Text style={styles.label}>Location *</Text>
-                  <View style={styles.inputWrap}>
-                    <Ionicons name="location-outline" size={16} color={Colors.textMuted} />
-                    <TextInput style={styles.input} value={location} onChangeText={setLocation} placeholder="Area, County" placeholderTextColor={Colors.textMuted} />
-                  </View>
-                </View>
-                <View style={[styles.field, { flex: 1 }]}>
-                  <Text style={styles.label}>Price</Text>
-                  <View style={styles.inputWrap}>
-                    <Text style={styles.kshLabel}>KSh</Text>
-                    <TextInput style={styles.input} value={price} onChangeText={setPrice} placeholder="e.g. 2,500/hr" placeholderTextColor={Colors.textMuted} keyboardType="default" />
-                  </View>
-                </View>
-              </View>
-
-              <Field label="Contact Phone *" icon="call-outline" value={phone} onChangeText={setPhone} placeholder="+254 7XX XXX XXX" keyboardType="phone-pad" />
-
-              {/* Quick county chips */}
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 2 }}>
-                {KENYAN_COUNTIES.slice(0, 12).map((c) => (
-                  <TouchableOpacity key={c} style={[styles.pill, location.includes(c) && styles.pillActive]} onPress={() => setLocation(c)}>
-                    <Text style={[styles.pillText, location.includes(c) && styles.pillTextActive]}>{c}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-
-              {availableTags.length > 0 && (
                 <View style={styles.field}>
-                  <Text style={styles.label}>Tags <Text style={{ color: Colors.textMuted }}>(select up to 6)</Text></Text>
-                  <View style={styles.tagsWrap}>
-                    {availableTags.map((tag) => (
-                      <TouchableOpacity
-                        key={tag}
-                        style={[styles.tagChip, selectedTags.includes(tag) && styles.tagChipActive]}
-                        onPress={() => toggleTag(tag)}
-                      >
-                        {selectedTags.includes(tag) && <Ionicons name="checkmark" size={12} color={Colors.gold} />}
-                        <Text style={[styles.tagText, selectedTags.includes(tag) && { color: Colors.gold }]}>{tag}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-              )}
+                 <Text style={styles.label}>Full Description *{isServicesCategory ? " (max 200 characters)" : isRealEstateCategory || isAutomobilesCategory || isEventsCategory || (isJobsCategory && jobType === "looking") ? " (max 300 characters)" : isJobsCategory && jobType === "hiring" ? " (max 500 characters)" : isEmergencyCategory || isFoodCategory ? " (max 200 characters)" : ""}</Text>
+                 <View style={[styles.inputWrap, { alignItems: "flex-start", paddingTop: 12, paddingBottom: 12 }]}>
+                   <TextInput
+                     style={[styles.input, { height: 100, textAlignVertical: "top" }]}
+                     value={description}
+                     onChangeText={setDescription}
+                     placeholder={isServicesCategory ? "Describe your business in up to 200 characters" : "Describe your listing in detail. Include what makes it special, experience, conditions, etc."}
+                     placeholderTextColor={Colors.textMuted}
+                     multiline
+                     maxLength={descMaxLength}
+                   />
+                 </View>
+                 <Text style={styles.charCount}>{description.length}/{descMaxLength}</Text>
+               </View>
+
+               <View style={styles.row2}>
+                 <View style={[styles.field, { flex: 1 }]}>
+                   <Text style={styles.label}>Location *</Text>
+                   <View style={styles.inputWrap}>
+                     <Ionicons name="location-outline" size={16} color={Colors.textMuted} />
+                     <TextInput style={styles.input} value={location} onChangeText={setLocation} placeholder="Area, County" placeholderTextColor={Colors.textMuted} />
+                   </View>
+                 </View>
+                 <View style={[styles.field, { flex: 1 }]}>
+                   <Text style={styles.label}>{isRealEstateCategory ? "Price *" : isEventsCategory ? "Ticket Price *" : isJobsCategory ? "Salary" : "Price"}</Text>
+                   <View style={styles.inputWrap}>
+                     <Text style={styles.kshLabel}>KSh</Text>
+                     <TextInput style={styles.input} value={price} onChangeText={setPrice} placeholder={isEventsCategory ? "e.g. Free, KSh 500" : "e.g. 2,500/hr"} placeholderTextColor={Colors.textMuted} keyboardType="default" />
+                   </View>
+                 </View>
+               </View>
+
+               <Field label="Contact Phone *" icon="call-outline" value={phone} onChangeText={setPhone} placeholder="+254 7XX XXX XXX" keyboardType="phone-pad" />
+
+               <View style={styles.row2}>
+                 <View style={[styles.field, { flex: 1 }]}>
+                   <Text style={styles.label}>County *</Text>
+                   <View style={styles.inputWrap}>
+                     <Ionicons name="map-outline" size={16} color={Colors.textMuted} />
+                     <TextInput style={styles.input} value={county} onChangeText={setCounty} placeholder="e.g. Nairobi, Mombasa" placeholderTextColor={Colors.textMuted} />
+                   </View>
+                 </View>
+                 <View style={[styles.field, { flex: 1 }]}>
+                   <Text style={styles.label}>Constituency *</Text>
+                   <View style={styles.inputWrap}>
+                     <Ionicons name="map-marker-outline" size={16} color={Colors.textMuted} />
+                     <TextInput style={styles.input} value={constituency} onChangeText={setConstituency} placeholder="e.g. Westlands, Embakasi" placeholderTextColor={Colors.textMuted} />
+                   </View>
+                 </View>
+               </View>
+
+               <View style={styles.field}>
+                 <Text style={styles.label}>Area Code / Location *</Text>
+                 <View style={styles.inputWrap}>
+                   <Ionicons name="location-on" size={16} color={Colors.textMuted} />
+                   <TextInput style={styles.input} value={areaCode} onChangeText={setAreaCode} placeholder="e.g. Kinoo, Thindigwa, Runda, Kikuyu" placeholderTextColor={Colors.textMuted} />
+                 </View>
+               </View>
+
+               {/* Quick county chips */}
+               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 2 }}>
+                 {KENYAN_COUNTIES.slice(0, 12).map((c) => (
+                   <TouchableOpacity key={c} style={[styles.pill, location.includes(c) && styles.pillActive]} onPress={() => setLocation(c)}>
+                     <Text style={[styles.pillText, location.includes(c) && styles.pillTextActive]}>{c}</Text>
+                   </TouchableOpacity>
+                 ))}
+               </ScrollView>
+
+               {/* Category 2: Businesses That Offer Services — extra fields */}
+               {isServicesCategory && (
+                 <View>
+                   <Field label="What service does your business offer? *" icon="construct-outline" value={serviceType} onChangeText={setServiceType} placeholder="e.g. Surveying, Legal Services, Cleaning" />
+                   <Field label="Business Logo or Cover Photo *" icon="image-outline" value={logoUrl} onChangeText={setLogoUrl} placeholder="URL to your business logo or cover photo" />
+                   <Field label="Keywords *" icon="search-outline" value={keywords} onChangeText={setKeywords} placeholder="e.g. Land Survey, Beacons, Title Deeds, Company Registration" />
+                   <Field label="How much do you charge? *" icon="cash-outline" value={charges} onChangeText={setCharges} placeholder="e.g. From KSh 5,000, Negotiable, Call for quotation" />
+                   <Field label="WhatsApp Number" icon="logo-whatsapp" value={whatsapp} onChangeText={setWhatsapp} placeholder="+254 7XX XXX XXX" keyboardType="phone-pad" />
+                   <Field label="Email Address" icon="mail-outline" value={email} onChangeText={setEmail} placeholder="info@yourbusiness.co.ke" keyboardType="email-address" />
+                   <View style={styles.field}>
+                     <Text style={styles.label}>Do you offer on-site services?</Text>
+                     <View style={styles.switchRow}>
+                       <Text style={[styles.switchLabel, !onSite && styles.switchLabelActive]}>No</Text>
+                       <Switch value={onSite} onValueChange={setOnSite} trackColor={{ false: Colors.darkCardElevated, true: Colors.green }} thumbColor={onSite ? Colors.gold : Colors.textMuted} />
+                       <Text style={[styles.switchLabel, onSite && styles.switchLabelActive]}>Yes</Text>
+                     </View>
+                   </View>
+                 </View>
+               )}
+
+               {/* Category 4: Food & Drinks — extra fields */}
+               {isFoodCategory && (
+                 <View>
+                   <Field label="Food & Drinks Category *" icon="restaurant-outline" value={foodCategory} onChangeText={setFoodCategory} placeholder="e.g. Restaurant, Café, Bakery, Catering, Butchery" />
+                   <Field label="Price Range *" icon="cash-outline" value={priceRange} onChangeText={setPriceRange} placeholder="e.g. From KSh 300, Negotiable, Call for pricing" />
+                   <View style={styles.field}>
+                     <Text style={styles.label}>Do you offer delivery?</Text>
+                     <View style={styles.switchRow}>
+                       <Text style={[styles.switchLabel, !delivery && styles.switchLabelActive]}>No</Text>
+                       <Switch value={delivery} onValueChange={setDelivery} trackColor={{ false: Colors.darkCardElevated, true: Colors.green }} thumbColor={delivery ? Colors.gold : Colors.textMuted} />
+                       <Text style={[styles.switchLabel, delivery && styles.switchLabelActive]}>Yes</Text>
+                     </View>
+                   </View>
+                   <Field label="Keywords *" icon="search-outline" value={keywords} onChangeText={setKeywords} placeholder="e.g. Pilau, Nyama Choma, Pizza, Coffee, Fresh Juice" />
+                   <Field label="WhatsApp Number" icon="logo-whatsapp" value={whatsapp} onChangeText={setWhatsapp} placeholder="+254 7XX XXX XXX" keyboardType="phone-pad" />
+                   <Field label="Email Address" icon="mail-outline" value={email} onChangeText={setEmail} placeholder="info@yourrestaurant.co.ke" keyboardType="email-address" />
+                 </View>
+               )}
+
+               {/* Category 5: Emergency & Healthcare — extra fields */}
+               {isEmergencyCategory && (
+                 <View>
+                   <Field label="You are a… *" icon="medkit-outline" value={facilityType} onChangeText={setFacilityType} placeholder="e.g. Healthcare, Emergency Services, Breakdown & Towing" />
+                   <View style={styles.field}>
+                     <Text style={styles.label}>Available 24/7?</Text>
+                     <View style={styles.switchRow}>
+                       <Text style={[styles.switchLabel, !available247 && styles.switchLabelActive]}>No</Text>
+                       <Switch value={available247} onValueChange={setAvailable247} trackColor={{ false: Colors.darkCardElevated, true: Colors.green }} thumbColor={available247 ? Colors.gold : Colors.textMuted} />
+                       <Text style={[styles.switchLabel, available247 && styles.switchLabelActive]}>Yes</Text>
+                     </View>
+                   </View>
+                   <Field label="Keywords *" icon="search-outline" value={keywords} onChangeText={setKeywords} placeholder="e.g. Ambulance, Emergency, Breakdown, Towing, First Aid, Pharmacy" />
+                   <Field label="WhatsApp Number" icon="logo-whatsapp" value={whatsapp} onChangeText={setWhatsapp} placeholder="+254 7XX XXX XXX" keyboardType="phone-pad" />
+                   <Field label="Email Address" icon="mail-outline" value={email} onChangeText={setEmail} placeholder="info@yourfacility.co.ke" keyboardType="email-address" />
+                 </View>
+               )}
+
+               {/* Category 6: Rentals & Real Estate — extra fields */}
+               {isRealEstateCategory && (
+                 <View>
+                   <Field label="You are listing a… *" icon="home-outline" value={propertyType} onChangeText={setPropertyType} placeholder="e.g. Residential, Commercial, Land" />
+                   <Field label="For… *" icon="pricetag" value={listingFor} onChangeText={setListingFor} placeholder="e.g. Rent, Sale" />
+                   <Field label="Keywords *" icon="search-outline" value={keywords} onChangeText={setKeywords} placeholder="e.g. 2 Bedroom, Parking, Balcony, Borehole, Furnished" />
+                   <Field label="WhatsApp Number" icon="logo-whatsapp" value={whatsapp} onChangeText={setWhatsapp} placeholder="+254 7XX XXX XXX" keyboardType="phone-pad" />
+                   <Field label="Email Address" icon="mail-outline" value={email} onChangeText={setEmail} placeholder="info@youragency.co.ke" keyboardType="email-address" />
+                 </View>
+               )}
+
+               {/* Category 7: Automobiles & Bikes — extra fields */}
+               {isAutomobilesCategory && (
+                 <View>
+                   <Field label="You are listing a… *" icon="car-outline" value={vehicleType} onChangeText={setVehicleType} placeholder="e.g. Car, Motorcycle, Bicycle, Spare Parts, Vehicle Hire" />
+                   <Field label="Condition *" icon="construct-outline" value={condition} onChangeText={setCondition} placeholder="e.g. New, Used" />
+                   <Field label="Keywords *" icon="search-outline" value={keywords} onChangeText={setKeywords} placeholder="e.g. Toyota, Automatic, Diesel, Low Mileage, SUV, 4WD" />
+                   <Field label="WhatsApp Number" icon="logo-whatsapp" value={whatsapp} onChangeText={setWhatsapp} placeholder="+254 7XX XXX XXX" keyboardType="phone-pad" />
+                   <Field label="Email Address" icon="mail-outline" value={email} onChangeText={setEmail} placeholder="info@yourdealership.co.ke" keyboardType="email-address" />
+                 </View>
+               )}
+
+               {/* Category 8: Jobs — extra fields */}
+               {isJobsCategory && (
+                 <View>
+                   <Field label="We're Hiring or I'm Looking? *" icon="briefcase-outline" value={jobType} onChangeText={setJobType} placeholder="e.g. We're Hiring or I'm Looking" />
+                   {jobType === "hiring" && (
+                     <View>
+                       <Field label="Employment Type *" icon="time-outline" value={employmentType} onChangeText={setEmploymentType} placeholder="e.g. Full-Time, Part-Time, Contract, Internship" />
+                       <Field label="Keywords *" icon="search-outline" value={keywords} onChangeText={setKeywords} placeholder="e.g. Accountant, CPA, QuickBooks, Driver, Sales" />
+                     </View>
+                   )}
+                   {jobType === "looking" && (
+                     <View>
+                       <Field label="Highest Level of Education *" icon="school-outline" value={education} onChangeText={setEducation} placeholder="e.g. Degree, Diploma, Certificate, Masters" />
+                       <Field label="Years of Experience *" icon="time-outline" value={experience} onChangeText={setExperience} placeholder="e.g. 2 years, 5+ years" />
+                       <Field label="Profile Photo URL" icon="image-outline" value={profilePhoto} onChangeText={setProfilePhoto} placeholder="URL to your profile photo" />
+                       <Field label="Upload CV (PDF only)" icon="document-attach-outline" value={cvUrl} onChangeText={setCvUrl} placeholder="URL to your CV PDF" />
+                       <Field label="Skills / Keywords *" icon="search-outline" value={keywords} onChangeText={setKeywords} placeholder="e.g. Excel, Driving, Plumbing, Customer Care, Sales" />
+                     </View>
+                   )}
+                   <Field label="Expected Salary / Salary" icon="cash-outline" value={salary} onChangeText={setSalary} placeholder={jobType === "hiring" ? "e.g. KSh 30,000–40,000, Negotiable" : "e.g. KSh 50,000/month"} />
+                   <Field label="WhatsApp Number" icon="logo-whatsapp" value={whatsapp} onChangeText={setWhatsapp} placeholder="+254 7XX XXX XXX" keyboardType="phone-pad" />
+                   <Field label="Email Address *" icon="mail-outline" value={email} onChangeText={setEmail} placeholder={jobType === "hiring" ? "hr@yourcompany.co.ke" : "your.email@gmail.com"} keyboardType="email-address" />
+                 </View>
+               )}
+
+               {/* Category 9: What's Happening — extra fields */}
+               {isEventsCategory && (
+                 <View>
+                   <Field label="Event Category *" icon="calendar-outline" value={eventCategory} onChangeText={setEventCategory} placeholder="e.g. Music & Entertainment, Business, Sports, Community, Church & Faith" />
+                   <View style={styles.row2}>
+                     <View style={[styles.field, { flex: 1 }]}>
+                       <Text style={styles.label}>Event Date *</Text>
+                       <View style={styles.inputWrap}>
+                         <Ionicons name="calendar-outline" size={16} color={Colors.textMuted} />
+                         <TextInput style={styles.input} value={eventDate} onChangeText={setEventDate} placeholder="e.g. 2025-08-15" placeholderTextColor={Colors.textMuted} />
+                       </View>
+                     </View>
+                     <View style={[styles.field, { flex: 1 }]}>
+                       <Text style={styles.label}>Event Time *</Text>
+                       <View style={styles.inputWrap}>
+                         <Ionicons name="time-outline" size={16} color={Colors.textMuted} />
+                         <TextInput style={styles.input} value={eventTime} onChangeText={setEventTime} placeholder="e.g. 2:00 PM" placeholderTextColor={Colors.textMuted} />
+                       </View>
+                     </View>
+                   </View>
+                   <Field label="Venue *" icon="location-outline" value={venue} onChangeText={setVenue} placeholder="e.g. KICC, Nairobi" />
+                   <Field label="Keywords *" icon="search-outline" value={keywords} onChangeText={setKeywords} placeholder="e.g. Gospel Concert, Farmers Market, Business Expo, Rugby" />
+                   <Field label="WhatsApp Number" icon="logo-whatsapp" value={whatsapp} onChangeText={setWhatsapp} placeholder="+254 7XX XXX XXX" keyboardType="phone-pad" />
+                   <Field label="Email Address" icon="mail-outline" value={email} onChangeText={setEmail} placeholder="info@yourevent.co.ke" keyboardType="email-address" />
+                 </View>
+               )}
+
+               {availableTags.length > 0 && (
+                 <View style={styles.field}>
+                   <Text style={styles.label}>Tags <Text style={{ color: Colors.textMuted }}>(select up to 6)</Text></Text>
+                   <View style={styles.tagsWrap}>
+                     {availableTags.map((tag) => (
+                       <TouchableOpacity
+                         key={tag}
+                         style={[styles.tagChip, selectedTags.includes(tag) && styles.tagChipActive]}
+                         onPress={() => toggleTag(tag)}
+                       >
+                         {selectedTags.includes(tag) && <Ionicons name="checkmark" size={12} color={Colors.gold} />}
+                         <Text style={[styles.tagText, selectedTags.includes(tag) && { color: Colors.gold }]}>{tag}</Text>
+                       </TouchableOpacity>
+                     ))}
+                   </View>
+                 </View>
+               )}
 
               {error ? <ErrorBox message={error} /> : null}
 
@@ -337,7 +634,7 @@ export default function CreateListingScreen() {
         {step === 3 && (
           <View>
             <Text style={styles.stepTitle}>Photos & Publish</Text>
-            <Text style={styles.stepSubtitle}>Add up to {MAX_PHOTOS} photos. Listings with photos get 3× more views!</Text>
+            <Text style={styles.stepSubtitle}>Add up to {maxPhotos} photos. Listings with photos get 3× more views!</Text>
 
             <View style={styles.photoGrid}>
               {photos.map((uri, i) => (
@@ -353,7 +650,7 @@ export default function CreateListingScreen() {
                   </TouchableOpacity>
                 </View>
               ))}
-              {photos.length < MAX_PHOTOS && (
+              {photos.length < maxPhotos && (
                 <View style={styles.photoAddRow}>
                   <TouchableOpacity style={styles.photoAddBtn} onPress={pickPhoto}>
                     <Ionicons name="images-outline" size={24} color={Colors.gold} />
@@ -402,7 +699,7 @@ export default function CreateListingScreen() {
                   <View style={[styles.previewImg, { backgroundColor: selectedCategory?.color ?? Colors.darkCardElevated, alignItems: "center", justifyContent: "center" }]}>
                     {selectedCategory ? (
                       selectedCategory.iconSet === "MaterialIcons"
-                        ? /* @ts-ignore */ <MaterialIcons name={selectedCategory.icon} size={28} color={selectedCategory.accentColor} />
+                        ? <MaterialIcons name={selectedCategory.icon as any} size={28} color={selectedCategory.accentColor} />
                         : <Ionicons name={selectedCategory.icon as any} size={28} color={selectedCategory.accentColor} />
                     ) : <Ionicons name="image-outline" size={28} color={Colors.textMuted} />}
                   </View>
@@ -489,6 +786,9 @@ const styles = StyleSheet.create({
   label: { fontFamily: "Inter_500Medium", fontSize: 13, color: Colors.textSecondary, paddingLeft: 2 },
   inputWrap: { flexDirection: "row", alignItems: "center", backgroundColor: Colors.darkCard, borderWidth: 1, borderColor: Colors.border, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 13, gap: 10 },
   input: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 15, color: Colors.textPrimary, padding: 0 },
+  switchRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  switchLabel: { fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.textMuted },
+  switchLabelActive: { color: Colors.gold, fontFamily: "Inter_600SemiBold" },
   kshLabel: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.textMuted },
   charCount: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.textMuted, textAlign: "right", marginTop: 3 },
   row2: { flexDirection: "row", gap: 10 },

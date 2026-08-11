@@ -21,7 +21,7 @@ exception when duplicate_object then null; end $$;
 
 do $$ begin
   create type public.category_id_enum as enum (
-    'providers', 'businesses', 'emergency', 'jobs', 'products', 'realestate'
+    'providers', 'services', 'products', 'food', 'emergency', 'realestate', 'automobiles', 'jobs', 'events'
   );
 exception when duplicate_object then null; end $$;
 

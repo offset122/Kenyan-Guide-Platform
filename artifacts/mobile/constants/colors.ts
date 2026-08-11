@@ -5,14 +5,27 @@ const green = "#1A5C38";
 const greenLight = "#236B44";
 const greenDark = "#0E3D24";
 const red = "#BB1919";
-const darkBg = "#0A1A10";
-const darkCard = "#0F2518";
-const darkCardElevated = "#172F1E";
+
+// Backgrounds — deep layered darks with a green tint
+const darkBg = "#080F0A";
+const darkCard = "rgba(15, 30, 20, 0.75)";
+const darkCardElevated = "rgba(22, 42, 28, 0.85)";
+const darkCardSolid = "#0F1E14";
+
+// Glass surfaces
+const glassBg = "rgba(15, 37, 24, 0.6)";
+const glassBorder = "rgba(201, 168, 76, 0.18)";
+const glassBorderStrong = "rgba(201, 168, 76, 0.35)";
+const glassHighlight = "rgba(201, 168, 76, 0.07)";
+
+// Text
 const textPrimary = "#F5F0E8";
 const textSecondary = "#A89C7E";
-const textMuted = "#6B7B68";
-const border = "rgba(201, 168, 76, 0.2)";
-const borderLight = "rgba(201, 168, 76, 0.1)";
+const textMuted = "#5A6B58";
+
+// Legacy aliases kept for compatibility
+const border = glassBorder;
+const borderLight = "rgba(201, 168, 76, 0.09)";
 
 export const Colors = {
   gold,
@@ -25,6 +38,11 @@ export const Colors = {
   darkBg,
   darkCard,
   darkCardElevated,
+  darkCardSolid,
+  glassBg,
+  glassBorder,
+  glassBorderStrong,
+  glassHighlight,
   textPrimary,
   textSecondary,
   textMuted,

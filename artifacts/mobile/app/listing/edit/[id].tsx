@@ -39,12 +39,43 @@ export default function EditListingScreen() {
   const [subtitle, setSubtitle] = useState(listing?.subtitle ?? "");
   const [description, setDescription] = useState(listing?.description ?? "");
   const [location, setLocation] = useState(listing?.location ?? "");
+  const [county, setCounty] = useState(listing?.county ?? "");
+  const [constituency, setConstituency] = useState(listing?.constituency ?? "");
+  const [areaCode, setAreaCode] = useState(listing?.areaCode ?? "");
   const [price, setPrice] = useState(listing?.price ?? "");
   const [phone, setPhone] = useState(listing?.phone ?? "");
+  const [whatsapp, setWhatsapp] = useState(listing?.whatsapp ?? "");
+  const [email, setEmail] = useState(listing?.email ?? "");
+  const [keywords, setKeywords] = useState(listing?.keywords?.join(", ") ?? "");
   const [selectedTags, setSelectedTags] = useState<string[]>(listing?.tags ?? []);
   const [available, setAvailable] = useState(listing?.available ?? true);
   const [photos, setPhotos] = useState<string[]>(listing?.photos ?? []);
   const [loading, setLoading] = useState(false);
+  const [serviceType, setServiceType] = useState(listing?.serviceType ?? "");
+  const [charges, setCharges] = useState(listing?.charges ?? "");
+  const [onSite, setOnSite] = useState(listing?.onSite ?? false);
+  const [logoUrl, setLogoUrl] = useState(listing?.logoUrl ?? "");
+  const [foodCategory, setFoodCategory] = useState(listing?.foodCategory ?? "");
+  const [delivery, setDelivery] = useState(listing?.delivery ?? false);
+  const [priceRange, setPriceRange] = useState(listing?.priceRange ?? "");
+  const [facilityType, setFacilityType] = useState(listing?.facilityType ?? "");
+  const [available247, setAvailable247] = useState(listing?.available247 ?? false);
+  const [propertyType, setPropertyType] = useState(listing?.propertyType ?? "");
+  const [listingFor, setListingFor] = useState(listing?.listingFor ?? "");
+  const [vehicleType, setVehicleType] = useState(listing?.vehicleType ?? "");
+  const [condition, setCondition] = useState(listing?.condition ?? "");
+  const [jobType, setJobType] = useState(listing?.jobType ?? "");
+  const [employmentType, setEmploymentType] = useState(listing?.employmentType ?? "");
+  const [salary, setSalary] = useState(listing?.salary ?? "");
+  const [education, setEducation] = useState(listing?.education ?? "");
+  const [experience, setExperience] = useState(listing?.experience ?? "");
+  const [profilePhoto, setProfilePhoto] = useState(listing?.profilePhoto ?? "");
+  const [cvUrl, setCvUrl] = useState(listing?.cvUrl ?? "");
+  const [eventCategory, setEventCategory] = useState(listing?.eventCategory ?? "");
+  const [eventDate, setEventDate] = useState(listing?.eventDate ?? "");
+  const [eventTime, setEventTime] = useState(listing?.eventTime ?? "");
+  const [venue, setVenue] = useState(listing?.venue ?? "");
+  const [ticketPrice, setTicketPrice] = useState(listing?.ticketPrice ?? "");
 
   if (!listing || !user || listing.userId !== user.id) {
     return (
@@ -61,6 +92,13 @@ export default function EditListingScreen() {
   }
 
   const availableTags = CATEGORY_TAGS[listing.categoryId] ?? [];
+  const isServicesCategory = listing.categoryId === "services";
+  const isFoodCategory = listing.categoryId === "food";
+  const isEmergencyCategory = listing.categoryId === "emergency";
+  const isRealEstateCategory = listing.categoryId === "realestate";
+  const isAutomobilesCategory = listing.categoryId === "automobiles";
+  const isJobsCategory = listing.categoryId === "jobs";
+  const isEventsCategory = listing.categoryId === "events";
 
   const toggleTag = (tag: string) => {
     setSelectedTags((prev) =>
@@ -100,11 +138,42 @@ export default function EditListingScreen() {
         subtitle: subtitle.trim(),
         description: description.trim(),
         location: location.trim(),
+        county: county.trim(),
+        constituency: constituency.trim(),
+        areaCode: areaCode.trim(),
         price: price.trim(),
         phone: phone.trim(),
+        whatsapp: whatsapp.trim(),
+        email: email.trim(),
+        keywords: keywords.split(",").map((k) => k.trim()).filter(Boolean),
         tags: selectedTags,
         available,
         photos,
+        serviceType: isServicesCategory ? serviceType.trim() : undefined,
+        charges: isServicesCategory ? charges.trim() : undefined,
+        onSite: isServicesCategory ? onSite : undefined,
+        logoUrl: isServicesCategory ? logoUrl.trim() : undefined,
+        foodCategory: isFoodCategory ? foodCategory.trim() : undefined,
+        delivery: isFoodCategory ? delivery : undefined,
+        priceRange: isFoodCategory ? priceRange.trim() : undefined,
+        facilityType: isEmergencyCategory ? facilityType.trim() : undefined,
+        available247: isEmergencyCategory ? available247 : undefined,
+        propertyType: isRealEstateCategory ? propertyType.trim() : undefined,
+        listingFor: isRealEstateCategory ? listingFor.trim() : undefined,
+        vehicleType: isAutomobilesCategory ? vehicleType.trim() : undefined,
+        condition: isAutomobilesCategory ? condition.trim() : undefined,
+        jobType: isJobsCategory ? jobType.trim() : undefined,
+        employmentType: isJobsCategory && jobType === "hiring" ? employmentType.trim() : undefined,
+        salary: isJobsCategory ? salary.trim() : undefined,
+        education: isJobsCategory && jobType === "looking" ? education.trim() : undefined,
+        experience: isJobsCategory && jobType === "looking" ? experience.trim() : undefined,
+        profilePhoto: isJobsCategory && jobType === "looking" ? profilePhoto.trim() : undefined,
+        cvUrl: isJobsCategory && jobType === "looking" ? cvUrl.trim() : undefined,
+        eventCategory: isEventsCategory ? eventCategory.trim() : undefined,
+        eventDate: isEventsCategory ? eventDate.trim() : undefined,
+        eventTime: isEventsCategory ? eventTime.trim() : undefined,
+        venue: isEventsCategory ? venue.trim() : undefined,
+        ticketPrice: isEventsCategory ? ticketPrice.trim() : undefined,
       });
       toastSuccess("Listing updated!");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -167,6 +236,31 @@ export default function EditListingScreen() {
           </View>
         </View>
 
+        <View style={styles.row2}>
+          <View style={[styles.field, { flex: 1 }]}>
+            <Text style={styles.label}>County</Text>
+            <View style={styles.inputWrap}>
+              <Ionicons name="map-outline" size={16} color={Colors.textMuted} />
+              <TextInput style={styles.input} value={county} onChangeText={setCounty} placeholder="e.g. Nairobi" placeholderTextColor={Colors.textMuted} />
+            </View>
+          </View>
+          <View style={[styles.field, { flex: 1 }]}>
+            <Text style={styles.label}>Constituency</Text>
+            <View style={styles.inputWrap}>
+              <Ionicons name="map-marker-outline" size={16} color={Colors.textMuted} />
+              <TextInput style={styles.input} value={constituency} onChangeText={setConstituency} placeholder="e.g. Westlands" placeholderTextColor={Colors.textMuted} />
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>Area Code / Location</Text>
+          <View style={styles.inputWrap}>
+            <Ionicons name="location-on" size={16} color={Colors.textMuted} />
+            <TextInput style={styles.input} value={areaCode} onChangeText={setAreaCode} placeholder="e.g. Kinoo, Westlands" placeholderTextColor={Colors.textMuted} />
+          </View>
+        </View>
+
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 2 }}>
           {KENYAN_COUNTIES.slice(0, 12).map((c) => (
             <TouchableOpacity key={c} style={[styles.pill, location.includes(c) && styles.pillActive]} onPress={() => setLocation(c)}>
@@ -176,6 +270,125 @@ export default function EditListingScreen() {
         </ScrollView>
 
         <Field label="Contact Phone *" icon="call-outline" value={phone} onChangeText={setPhone} placeholder="+254 7XX XXX XXX" keyboardType="phone-pad" />
+        <Field label="WhatsApp Number" icon="logo-whatsapp" value={whatsapp} onChangeText={setWhatsapp} placeholder="+254 7XX XXX XXX" keyboardType="phone-pad" />
+        <Field label="Email Address" icon="mail-outline" value={email} onChangeText={setEmail} placeholder="your@email.co.ke" keyboardType="email-address" />
+
+        {/* Services */}
+        {isServicesCategory && (
+          <View>
+            <Field label="Service Type" icon="construct-outline" value={serviceType} onChangeText={setServiceType} placeholder="e.g. Surveying, Cleaning" />
+            <Field label="Charges" icon="cash-outline" value={charges} onChangeText={setCharges} placeholder="e.g. From KSh 5,000" />
+            <Field label="Logo URL" icon="image-outline" value={logoUrl} onChangeText={setLogoUrl} placeholder="URL to logo" />
+            <Field label="Keywords (comma separated)" icon="search-outline" value={keywords} onChangeText={setKeywords} placeholder="e.g. Surveying, Beacons" />
+            <View style={styles.field}>
+              <Text style={styles.label}>On-site services?</Text>
+              <View style={styles.switchRow}>
+                <Text style={[styles.switchLabel, !onSite && styles.switchLabelActive]}>No</Text>
+                <Switch value={onSite} onValueChange={setOnSite} trackColor={{ false: Colors.darkCardElevated, true: Colors.green }} thumbColor={onSite ? Colors.gold : Colors.textMuted} />
+                <Text style={[styles.switchLabel, onSite && styles.switchLabelActive]}>Yes</Text>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Food */}
+        {isFoodCategory && (
+          <View>
+            <Field label="Food Category" icon="restaurant-outline" value={foodCategory} onChangeText={setFoodCategory} placeholder="e.g. Restaurant, Café, Bakery" />
+            <Field label="Price Range" icon="cash-outline" value={priceRange} onChangeText={setPriceRange} placeholder="e.g. From KSh 300" />
+            <View style={styles.field}>
+              <Text style={styles.label}>Offers delivery?</Text>
+              <View style={styles.switchRow}>
+                <Text style={[styles.switchLabel, !delivery && styles.switchLabelActive]}>No</Text>
+                <Switch value={delivery} onValueChange={setDelivery} trackColor={{ false: Colors.darkCardElevated, true: Colors.green }} thumbColor={delivery ? Colors.gold : Colors.textMuted} />
+                <Text style={[styles.switchLabel, delivery && styles.switchLabelActive]}>Yes</Text>
+              </View>
+            </View>
+            <Field label="Keywords (comma separated)" icon="search-outline" value={keywords} onChangeText={setKeywords} placeholder="e.g. Pilau, Nyama Choma, Coffee" />
+          </View>
+        )}
+
+        {/* Emergency */}
+        {isEmergencyCategory && (
+          <View>
+            <Field label="Facility Type" icon="medkit-outline" value={facilityType} onChangeText={setFacilityType} placeholder="e.g. Hospital, Ambulance, Police" />
+            <View style={styles.field}>
+              <Text style={styles.label}>Available 24/7?</Text>
+              <View style={styles.switchRow}>
+                <Text style={[styles.switchLabel, !available247 && styles.switchLabelActive]}>No</Text>
+                <Switch value={available247} onValueChange={setAvailable247} trackColor={{ false: Colors.darkCardElevated, true: Colors.green }} thumbColor={available247 ? Colors.gold : Colors.textMuted} />
+                <Text style={[styles.switchLabel, available247 && styles.switchLabelActive]}>Yes</Text>
+              </View>
+            </View>
+            <Field label="Keywords (comma separated)" icon="search-outline" value={keywords} onChangeText={setKeywords} placeholder="e.g. Ambulance, Emergency, First Aid" />
+          </View>
+        )}
+
+        {/* Real Estate */}
+        {isRealEstateCategory && (
+          <View>
+            <Field label="Property Type" icon="home-outline" value={propertyType} onChangeText={setPropertyType} placeholder="e.g. Residential, Commercial, Land" />
+            <Field label="Listing For" icon="pricetag-outline" value={listingFor} onChangeText={setListingFor} placeholder="e.g. Rent, Sale" />
+            <Field label="Keywords (comma separated)" icon="search-outline" value={keywords} onChangeText={setKeywords} placeholder="e.g. 2 Bedroom, Parking, Borehole" />
+          </View>
+        )}
+
+        {/* Automobiles */}
+        {isAutomobilesCategory && (
+          <View>
+            <Field label="Vehicle Type" icon="car-outline" value={vehicleType} onChangeText={setVehicleType} placeholder="e.g. Car, Motorcycle, Bicycle, Spare Parts" />
+            <Field label="Condition" icon="construct-outline" value={condition} onChangeText={setCondition} placeholder="e.g. New, Used" />
+            <Field label="Keywords (comma separated)" icon="search-outline" value={keywords} onChangeText={setKeywords} placeholder="e.g. Toyota, Automatic, Diesel" />
+          </View>
+        )}
+
+        {/* Jobs */}
+        {isJobsCategory && (
+          <View>
+            <Field label="Job Type" icon="briefcase-outline" value={jobType} onChangeText={setJobType} placeholder="e.g. We're Hiring or I'm Looking" />
+            {jobType === "hiring" && (
+              <View>
+                <Field label="Employment Type" icon="time-outline" value={employmentType} onChangeText={setEmploymentType} placeholder="e.g. Full-Time, Part-Time, Contract" />
+                <Field label="Keywords (comma separated)" icon="search-outline" value={keywords} onChangeText={setKeywords} placeholder="e.g. Accountant, Driver, Sales" />
+              </View>
+            )}
+            {jobType === "looking" && (
+              <View>
+                <Field label="Education Level" icon="school-outline" value={education} onChangeText={setEducation} placeholder="e.g. Degree, Diploma, Certificate" />
+                <Field label="Years of Experience" icon="time-outline" value={experience} onChangeText={setExperience} placeholder="e.g. 2 years, 5+ years" />
+                <Field label="Profile Photo URL" icon="image-outline" value={profilePhoto} onChangeText={setProfilePhoto} placeholder="URL to profile photo" />
+                <Field label="CV URL (PDF)" icon="document-attach-outline" value={cvUrl} onChangeText={setCvUrl} placeholder="URL to CV PDF" />
+                <Field label="Skills (comma separated)" icon="search-outline" value={keywords} onChangeText={setKeywords} placeholder="e.g. Excel, Driving, Plumbing" />
+              </View>
+            )}
+            <Field label="Salary" icon="cash-outline" value={salary} onChangeText={setSalary} placeholder="e.g. KSh 30,000–40,000" />
+          </View>
+        )}
+
+        {/* Events */}
+        {isEventsCategory && (
+          <View>
+            <Field label="Event Category" icon="calendar-outline" value={eventCategory} onChangeText={setEventCategory} placeholder="e.g. Music, Business, Sports, Community" />
+            <View style={styles.row2}>
+              <View style={[styles.field, { flex: 1 }]}>
+                <Text style={styles.label}>Event Date</Text>
+                <View style={styles.inputWrap}>
+                  <Ionicons name="calendar-outline" size={16} color={Colors.textMuted} />
+                  <TextInput style={styles.input} value={eventDate} onChangeText={setEventDate} placeholder="e.g. 2025-08-15" placeholderTextColor={Colors.textMuted} />
+                </View>
+              </View>
+              <View style={[styles.field, { flex: 1 }]}>
+                <Text style={styles.label}>Event Time</Text>
+                <View style={styles.inputWrap}>
+                  <Ionicons name="time-outline" size={16} color={Colors.textMuted} />
+                  <TextInput style={styles.input} value={eventTime} onChangeText={setEventTime} placeholder="e.g. 2:00 PM" placeholderTextColor={Colors.textMuted} />
+                </View>
+              </View>
+            </View>
+            <Field label="Venue" icon="location-outline" value={venue} onChangeText={setVenue} placeholder="e.g. KICC, Nairobi" />
+            <Field label="Keywords (comma separated)" icon="search-outline" value={keywords} onChangeText={setKeywords} placeholder="e.g. Gospel Concert, Farmers Market" />
+          </View>
+        )}
 
         {availableTags.length > 0 && (
           <View style={styles.field}>

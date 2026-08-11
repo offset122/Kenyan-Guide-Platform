@@ -34,8 +34,8 @@ export function FeaturedCard({ listing }: FeaturedCardProps) {
   };
 
   return (
-    <TouchableOpacity style={styles.card} onPress={handlePress} activeOpacity={0.9}>
-      {/* Top image / gradient area */}
+    <TouchableOpacity style={styles.card} onPress={handlePress} activeOpacity={0.88}>
+      {/* Image / gradient area */}
       <View style={styles.imageArea}>
         {hasPhoto ? (
           <>
@@ -43,29 +43,29 @@ export function FeaturedCard({ listing }: FeaturedCardProps) {
               source={{ uri: listing.photos![0] }}
               style={StyleSheet.absoluteFill}
               contentFit="cover"
-              transition={200}
+              transition={300}
             />
             <LinearGradient
-              colors={["transparent", "rgba(0,0,0,0.65)"]}
+              colors={["transparent", "rgba(5,12,8,0.88)"]}
               style={StyleSheet.absoluteFill}
             />
           </>
         ) : (
           <LinearGradient
-            colors={[category?.color ?? Colors.green, Colors.darkCard]}
+            colors={[category?.color ?? Colors.green, Colors.darkBg]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={StyleSheet.absoluteFill}
           />
         )}
 
-        {/* Category icon (only when no photo) */}
+        {/* Category icon when no photo */}
         {!hasPhoto && (
           <View style={styles.iconWrap}>
             {category ? (
               /* @ts-ignore */
-              <Icon name={category.icon} size={22} color={category.accentColor} />
-            ) : <Ionicons name="grid-outline" size={22} color={Colors.gold} />}
+              <Icon name={category.icon} size={24} color={category.accentColor} />
+            ) : <Ionicons name="grid-outline" size={24} color={Colors.gold} />}
           </View>
         )}
 
@@ -78,10 +78,13 @@ export function FeaturedCard({ listing }: FeaturedCardProps) {
 
         {/* Bookmark */}
         <TouchableOpacity style={styles.bookmarkBtn} onPress={handleSave} hitSlop={8}>
-          <Ionicons name={saved ? "bookmark" : "bookmark-outline"} size={16} color={saved ? Colors.gold : "rgba(255,255,255,0.85)"} />
+          <Ionicons
+            name={saved ? "bookmark" : "bookmark-outline"}
+            size={15}
+            color={saved ? Colors.gold : "rgba(255,255,255,0.9)"}
+          />
         </TouchableOpacity>
 
-        {/* Verified badge */}
         {listing.verified && (
           <View style={styles.verifiedBadge}>
             <Ionicons name="shield-checkmark" size={10} color={Colors.gold} />
@@ -89,7 +92,7 @@ export function FeaturedCard({ listing }: FeaturedCardProps) {
         )}
       </View>
 
-      {/* Info */}
+      {/* Glass info panel */}
       <View style={styles.info}>
         <Text style={styles.title} numberOfLines={1}>{listing.title}</Text>
         <Text style={styles.subtitle} numberOfLines={1}>{listing.subtitle}</Text>
@@ -109,21 +112,29 @@ export function FeaturedCard({ listing }: FeaturedCardProps) {
 
         {listing.price && <Text style={styles.price}>{listing.price}</Text>}
       </View>
+
+      {/* Bottom accent */}
+      <View style={styles.bottomAccent} />
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    width: 172,
+    width: 175,
     backgroundColor: Colors.darkCard,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.glassBorder,
     overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 14,
+    elevation: 8,
   },
   imageArea: {
-    height: 128,
+    height: 132,
     position: "relative",
     justifyContent: "space-between",
     flexDirection: "row",
@@ -131,31 +142,56 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   iconWrap: {
-    width: 44, height: 44, borderRadius: 14,
-    backgroundColor: "rgba(0,0,0,0.25)",
-    alignItems: "center", justifyContent: "center",
+    width: 46,
+    height: 46,
+    borderRadius: 15,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   badge: {
-    backgroundColor: "rgba(0,0,0,0.45)",
+    backgroundColor: "rgba(0,0,0,0.5)",
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(201,168,76,0.3)",
     paddingHorizontal: 8,
     paddingVertical: 4,
     alignSelf: "flex-start",
   },
-  badgeText: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: Colors.gold },
+  badgeText: { fontFamily: "Inter_700Bold", fontSize: 9, color: Colors.gold, letterSpacing: 0.4 },
   bookmarkBtn: {
-    position: "absolute", bottom: 10, right: 10,
-    width: 28, height: 28, borderRadius: 8,
-    backgroundColor: "rgba(0,0,0,0.35)",
-    alignItems: "center", justifyContent: "center",
+    position: "absolute",
+    bottom: 10,
+    right: 10,
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   verifiedBadge: {
-    position: "absolute", top: 10, right: 10,
-    width: 22, height: 22, borderRadius: 7,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    alignItems: "center", justifyContent: "center",
+    position: "absolute",
+    top: 10,
+    right: 10,
+    width: 22,
+    height: 22,
+    borderRadius: 7,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    borderWidth: 1,
+    borderColor: "rgba(201,168,76,0.3)",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  info: { padding: 12, gap: 4 },
+  info: {
+    padding: 12,
+    gap: 4,
+    backgroundColor: Colors.darkCard,
+  },
   title: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.textPrimary },
   subtitle: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.textSecondary },
   ratingRow: { flexDirection: "row", alignItems: "center", gap: 3 },
@@ -164,4 +200,8 @@ const styles = StyleSheet.create({
   locationRow: { flexDirection: "row", alignItems: "center", gap: 2 },
   location: { fontFamily: "Inter_400Regular", fontSize: 10, color: Colors.textMuted },
   price: { fontFamily: "Inter_700Bold", fontSize: 13, color: Colors.gold, marginTop: 2 },
+  bottomAccent: {
+    height: 2,
+    backgroundColor: "rgba(201,168,76,0.25)",
+  },
 });

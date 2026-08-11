@@ -4,7 +4,7 @@
 // ============================================================================
 
 export type AccountType = "customer" | "provider" | "business" | "employer" | "agent";
-export type CategoryId = "providers" | "businesses" | "emergency" | "jobs" | "products" | "realestate";
+export type CategoryId = "providers" | "services" | "products" | "food" | "emergency" | "realestate" | "automobiles" | "jobs" | "events";
 
 // ---------------------------------------------------------------------------
 // Table row types (what Supabase returns)
@@ -24,24 +24,36 @@ export interface Profile {
 
 export interface Listing {
   id: string;
-  category_id: CategoryId;
+  categoryId: CategoryId;
   title: string;
   subtitle: string;
   description: string;
   location: string;
-  county: string | null;
+  county?: string | null;
+  constituency?: string | null;
+  areaCode?: string | null;
+  keywords?: string[] | null;
+  serviceType?: string | null;
+  onSite?: boolean | null;
+  charges?: string | null;
+  whatsapp?: string | null;
+  email?: string | null;
+  logoUrl?: string | null;
+  foodCategory?: string | null;
+  delivery?: boolean | null;
+  priceRange?: string | null;
   price: string | null;
   phone: string;
   tags: string[];
-  user_id: string;
+  userId: string;
   verified: boolean;
   available: boolean;
   badge: string | null;
   rating: number;
-  review_count: number;
-  search_vector: string | null; // tsvector — not used client-side
-  created_at: string;
-  updated_at: string;
+  reviewCount: number;
+  searchVector: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ListingImage {
@@ -103,12 +115,21 @@ export type ProfileUpdate = Partial<
 
 export type ListingInsert = Pick<
   Listing,
-  | "category_id"
+  | "categoryId"
   | "title"
   | "subtitle"
   | "description"
   | "location"
   | "county"
+  | "constituency"
+  | "areaCode"
+  | "keywords"
+  | "serviceType"
+  | "onSite"
+  | "charges"
+  | "whatsapp"
+  | "email"
+  | "logoUrl"
   | "price"
   | "phone"
   | "tags"
@@ -135,7 +156,7 @@ export interface Database {
       };
       listings: {
         Row: Listing;
-        Insert: ListingInsert & { user_id: string };
+        Insert: ListingInsert & { userId: string };
         Update: ListingUpdate;
       };
       listing_images: {

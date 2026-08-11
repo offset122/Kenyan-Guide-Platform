@@ -376,7 +376,7 @@ const [NotificationProvider, useNotifications] = createContextHook(() => {
         router.push("/(tabs)/explore" as any);
         break;
       default:
-        router.push("/(tabs)/index" as any);
+         router.push("/(tabs)" as any);
     }
   }, []);
 

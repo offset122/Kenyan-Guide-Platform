@@ -34,6 +34,37 @@ export type Listing = {
   subtitle: string;
   description: string;
   location: string;
+  county?: string | null;
+  constituency?: string | null;
+  areaCode?: string | null;
+  keywords?: string[] | null;
+  serviceType?: string | null;
+  onSite?: boolean | null;
+  charges?: string | null;
+  whatsapp?: string | null;
+  email?: string | null;
+  logoUrl?: string | null;
+  foodCategory?: string | null;
+  delivery?: boolean | null;
+  priceRange?: string | null;
+  facilityType?: string | null;
+  available247?: boolean | null;
+  propertyType?: string | null;
+  listingFor?: string | null;
+  vehicleType?: string | null;
+  condition?: string | null;
+  jobType?: string | null;
+  employmentType?: string | null;
+  salary?: string | null;
+  education?: string | null;
+  experience?: string | null;
+  profilePhoto?: string | null;
+  cvUrl?: string | null;
+  eventCategory?: string | null;
+  eventDate?: string | null;
+  eventTime?: string | null;
+  venue?: string | null;
+  ticketPrice?: string | null;
   price?: string;
   phone: string;
   tags: string[];
@@ -105,15 +136,67 @@ const SEED_LISTINGS: Listing[] = [
     createdAt: new Date(Date.now() - 8 * 86400000).toISOString(),
   },
   {
-    id: "seed_b1", categoryId: "businesses", title: "Savannah Legal Associates", subtitle: "Law Firm",
-    location: "Upper Hill, Nairobi", rating: 4.8, reviewCount: 87, phone: "+254 20 234 5678",
-    verified: true, badge: "Premium", tags: ["Legal", "Corporate", "Property Law"],
-    description: "Full-service law firm specializing in corporate law, real estate transactions, employment law, and dispute resolution.",
-    available: true, userId: "seed", userName: "Savannah Legal",
+    id: "seed_s1", categoryId: "services", title: "Prime Surveying Co.", subtitle: "Land Surveying & Beacons",
+    location: "Kilimani, Nairobi", county: "Nairobi", constituency: "Westlands", areaCode: "Kilimani",
+    keywords: ["Surveying", "Land Survey", "Beacons", "Title Deeds", "GIS Mapping"],
+    serviceType: "Land Surveying", onSite: true, charges: "From KSh 15,000", whatsapp: "+254 712 345 678", email: "info@primesurvey.co.ke", logoUrl: "",
+    rating: 4.8, reviewCount: 67, price: "From KSh 15,000",
+    phone: "+254 712 345 678", verified: true, badge: "Verified Pro",
+    tags: ["Surveying", "Land", "Beacons", "Title Deeds"],
+    description: "Professional land surveying services with over 10 years experience. Specialising in boundary surveys, topographic surveys, and beacon installation. Title deed verification and company registration support available.",
+    available: true, userId: "seed", userName: "Prime Surveying",
+    createdAt: new Date(Date.now() - 40 * 86400000).toISOString(),
+  },
+  {
+    id: "seed_s2", categoryId: "services", title: "Elite Cleaning Services", subtitle: "Commercial & Residential Cleaning",
+    location: "Westlands, Nairobi", county: "Nairobi", constituency: "Westlands", areaCode: "Westlands",
+    keywords: ["Office Cleaning", "Deep Cleaning", "Carpet Cleaning", "House Cleaning"],
+    serviceType: "Cleaning Services", onSite: true, charges: "From KSh 3,000", whatsapp: "+254 723 456 789", email: "hello@eliteclean.co.ke", logoUrl: "",
+    rating: 4.7, reviewCount: 143, price: "From KSh 3,000",
+    phone: "+254 723 456 789", verified: true, badge: "Popular",
+    tags: ["Cleaning", "Office", "Commercial", "Residential"],
+    description: "Reliable cleaning company serving offices, homes, and commercial spaces. Deep cleaning, carpet cleaning, and post-construction cleanup. Trained staff and eco-friendly products.",
+    available: true, userId: "seed", userName: "Elite Cleaning",
+    createdAt: new Date(Date.now() - 25 * 86400000).toISOString(),
+  },
+  {
+    id: "seed_s3", categoryId: "services", title: "TechPrint Solutions", subtitle: "Printing & Design Studio",
+    location: "Upper Hill, Nairobi", county: "Nairobi", constituency: "Karura", areaCode: "Upper Hill",
+    keywords: ["Printing", "Design", "Branding", "Flyers", "Business Cards"],
+    serviceType: "Printing & Design", onSite: false, charges: "From KSh 500", whatsapp: "+254 734 567 890", email: "print@techprint.co.ke", logoUrl: "",
+    rating: 4.6, reviewCount: 89, price: "From KSh 500",
+    phone: "+254 734 567 890", verified: true, badge: "Verified Pro",
+    tags: ["Printing", "Design", "Branding", "Marketing"],
+    description: "Full-service printing and design studio. Business cards, flyers, banners, branded merchandise, and digital design. Fast turnaround and quality guaranteed.",
+    available: true, userId: "seed", userName: "TechPrint",
     createdAt: new Date(Date.now() - 20 * 86400000).toISOString(),
   },
   {
-    id: "seed_b2", categoryId: "businesses", title: "Kenyatta National Hospital", subtitle: "Public Referral Hospital",
+    id: "seed_s4", categoryId: "services", title: "FixIt Electrical & Plumbing", subtitle: "Repair & Installation Centre",
+    location: "Eastleigh, Nairobi", county: "Nairobi", constituency: "Embakasi Central", areaCode: "Eastleigh",
+    keywords: ["Electrical Repair", "Plumbing", "AC Repair", "Maintenance"],
+    serviceType: "Repair Services", onSite: true, charges: "Negotiable", whatsapp: "+254 745 678 901", email: "", logoUrl: "",
+    rating: 4.5, reviewCount: 211, price: "Negotiable",
+    phone: "+254 745 678 901", verified: false, badge: "Popular",
+    tags: ["Electrical", "Plumbing", "Repair", "Maintenance"],
+    description: "Trusted electrical and plumbing repair centre. Wiring, pipe repair, AC servicing, and general maintenance. Emergency callouts available across Nairobi.",
+    available: true, userId: "seed", userName: "FixIt Centre",
+    createdAt: new Date(Date.now() - 15 * 86400000).toISOString(),
+  },
+  {
+    id: "seed_s5", categoryId: "services", title: "BrightMinds Consultancy", subtitle: "Business & Marketing Consultancy",
+    location: "Kilimani, Nairobi", county: "Nairobi", constituency: "Westlands", areaCode: "Kilimani",
+    keywords: ["Business Consultancy", "Marketing Strategy", "Brand Strategy", "SEO"],
+    serviceType: "Consultancy", onSite: false, charges: "From KSh 8,000", whatsapp: "+254 756 789 012", email: "hello@brightminds.co.ke", logoUrl: "",
+    rating: 4.9, reviewCount: 34, price: "From KSh 8,000",
+    phone: "+254 756 789 012", verified: true, badge: "Top Rated",
+    tags: ["Consulting", "Marketing", "Business", "Strategy"],
+    description: "Strategic business and marketing consultancy helping SMEs grow. Services include brand strategy, digital marketing, SEO, and business plan development.",
+    available: true, userId: "seed", userName: "BrightMinds",
+    createdAt: new Date(Date.now() - 10 * 86400000).toISOString(),
+  },
+  {
+    id: "seed_b2", categoryId: "emergency", title: "Kenyatta National Hospital", subtitle: "Public Referral Hospital",
     location: "Hospital Road, Nairobi", rating: 4.3, reviewCount: 2341, phone: "+254 20 272 6300",
     verified: true, badge: "Official", tags: ["Hospital", "Emergency", "Outpatient"],
     description: "Kenya's largest public referral hospital offering comprehensive medical services including emergency care, surgery, maternity, and specialist clinics.",
@@ -121,7 +204,7 @@ const SEED_LISTINGS: Listing[] = [
     createdAt: new Date(Date.now() - 180 * 86400000).toISOString(),
   },
   {
-    id: "seed_b3", categoryId: "businesses", title: "Java House Nairobi", subtitle: "Coffee & Restaurant",
+    id: "seed_b3", categoryId: "food", title: "Java House Nairobi", subtitle: "Coffee & Restaurant",
     location: "Westlands, Nairobi", rating: 4.6, reviewCount: 1205, phone: "+254 20 765 4321",
     verified: true, badge: "Popular", tags: ["Coffee", "Breakfast", "Wi-Fi"],
     description: "Kenya's beloved coffee house chain. Great coffee, fresh food, and fast Wi-Fi. Perfect for meetings or a relaxed meal. Open daily 6am–10pm.",
@@ -280,6 +363,11 @@ const SEED_LISTINGS: Listing[] = [
 ];
 
 function mapListingFromSupabase(row: any): Listing {
+  const photos = Array.isArray(row.listing_images)
+    ? row.listing_images
+        .sort((a: any, b: any) => a.sort_order - b.sort_order)
+        .map((img: any) => img.url)
+    : undefined;
   return {
     id: row.id,
     categoryId: row.category_id,
@@ -287,6 +375,37 @@ function mapListingFromSupabase(row: any): Listing {
     subtitle: row.subtitle,
     description: row.description,
     location: row.location,
+    county: row.county,
+    constituency: row.constituency,
+    areaCode: row.area_code,
+    keywords: row.keywords,
+    serviceType: row.service_type,
+    onSite: row.on_site,
+    charges: row.charges,
+    whatsapp: row.whatsapp,
+    email: row.email,
+    logoUrl: row.logo_url,
+    foodCategory: row.food_category,
+    delivery: row.delivery,
+    priceRange: row.price_range,
+    facilityType: row.facility_type,
+    available247: row.available_247,
+    propertyType: row.property_type,
+    listingFor: row.listing_for,
+    vehicleType: row.vehicle_type,
+    condition: row.condition,
+    jobType: row.job_type,
+    employmentType: row.employment_type,
+    salary: row.salary,
+    education: row.education,
+    experience: row.experience,
+    profilePhoto: row.profile_photo,
+    cvUrl: row.cv_url,
+    eventCategory: row.event_category,
+    eventDate: row.event_date,
+    eventTime: row.event_time,
+    venue: row.venue,
+    ticketPrice: row.ticket_price,
     price: row.price,
     phone: row.phone,
     tags: row.tags ?? [],
@@ -299,7 +418,7 @@ function mapListingFromSupabase(row: any): Listing {
     available: row.available ?? true,
     createdAt: row.created_at,
     badge: row.badge,
-    photos: row.photos,
+    photos,
   };
 }
 
@@ -366,7 +485,7 @@ const [AppContextProvider, useAppContext] = createContextHook(() => {
 
         const { data: listingsData, error: listingsError } = await supabase
           .from("listings")
-          .select("*, profiles(*)")
+          .select("*, profiles!listings_user_id_fkey(*), listing_images(url, sort_order)")
           .order("created_at", { ascending: false });
 
         if (listingsError) {
@@ -380,7 +499,7 @@ const [AppContextProvider, useAppContext] = createContextHook(() => {
 
         const { data: reviewsData, error: reviewsError } = await supabase
           .from("reviews")
-          .select("*, profiles(*)");
+          .select("*, profiles!reviews_user_id_fkey(*)");
 
         if (reviewsError) {
           console.warn("Failed to fetch reviews:", reviewsError);
@@ -424,6 +543,32 @@ const [AppContextProvider, useAppContext] = createContextHook(() => {
           .from("profiles")
           .update(updates)
           .eq("id", signUpData.user.id);
+      }
+
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      });
+
+      if (!signInError && signInData.user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", signInData.user.id)
+          .single();
+
+        const mappedProfile = profile ? mapProfileFromSupabase(profile) : {
+          id: signInData.user.id,
+          name: signInData.user.user_metadata?.name ?? data.name,
+          email: signInData.user.email ?? "",
+          phone: data.phone,
+          accountType: data.accountType,
+          bio: data.bio,
+          location: data.location,
+          createdAt: new Date().toISOString(),
+        };
+
+        setUser({ ...mappedProfile, email: signInData.user.email ?? "" });
       }
 
       return { success: true };
@@ -507,28 +652,99 @@ const [AppContextProvider, useAppContext] = createContextHook(() => {
         subtitle: data.subtitle,
         description: data.description,
         location: data.location,
+        county: data.county,
+        constituency: data.constituency,
+        area_code: data.areaCode,
+        keywords: data.keywords,
+        service_type: data.serviceType,
+        on_site: data.onSite,
+        charges: data.charges,
+        whatsapp: data.whatsapp,
+        email: data.email,
+        logo_url: data.logoUrl,
+        food_category: data.foodCategory,
+        delivery: data.delivery,
+        price_range: data.priceRange,
+        facility_type: data.facilityType,
+        available_247: data.available247,
+        property_type: data.propertyType,
+        listing_for: data.listingFor,
+        vehicle_type: data.vehicleType,
+        condition: data.condition,
+        job_type: data.jobType,
+        employment_type: data.employmentType,
+        salary: data.salary,
+        education: data.education,
+        experience: data.experience,
+        profile_photo: data.profilePhoto,
+        cv_url: data.cvUrl,
+        event_category: data.eventCategory,
+        event_date: data.eventDate,
+        event_time: data.eventTime,
+        venue: data.venue,
+        ticket_price: data.ticketPrice,
         price: data.price,
         phone: data.phone,
         tags: data.tags,
         user_id: user.id,
         available: data.available ?? true,
       })
-      .select("*, profiles(*)")
+      .select("*, profiles!listings_user_id_fkey(*)")
       .single();
 
     if (error) throw error;
 
-    const listing = mapListingFromSupabase(inserted);
+    if (data.photos && data.photos.length > 0) {
+      await supabase.from("listing_images").insert(
+        data.photos.map((url, i) => ({ listing_id: inserted.id, url, sort_order: i }))
+      );
+    }
+
+    const listing = mapListingFromSupabase({
+      ...inserted,
+      listing_images: (data.photos ?? []).map((url, i) => ({ url, sort_order: i })),
+    });
     setListings((prev) => [listing, ...prev]);
     return listing;
   }, [user]);
 
-  const updateListing = useCallback(async (id: string, updates: Partial<Pick<Listing, "title" | "subtitle" | "description" | "location" | "price" | "phone" | "tags" | "available" | "photos">>) => {
+  const updateListing = useCallback(async (id: string, updates: Partial<Pick<Listing, "title" | "subtitle" | "description" | "location" | "county" | "constituency" | "areaCode" | "keywords" | "serviceType" | "onSite" | "charges" | "whatsapp" | "email" | "logoUrl" | "foodCategory" | "delivery" | "priceRange" | "facilityType" | "available247" | "propertyType" | "listingFor" | "vehicleType" | "condition" | "jobType" | "employmentType" | "salary" | "education" | "experience" | "profilePhoto" | "cvUrl" | "eventCategory" | "eventDate" | "eventTime" | "venue" | "ticketPrice" | "price" | "phone" | "tags" | "available" | "photos">>) => {
     const dbUpdates: Record<string, any> = {};
     if (updates.title !== undefined) dbUpdates.title = updates.title;
     if (updates.subtitle !== undefined) dbUpdates.subtitle = updates.subtitle;
     if (updates.description !== undefined) dbUpdates.description = updates.description;
     if (updates.location !== undefined) dbUpdates.location = updates.location;
+    if (updates.county !== undefined) dbUpdates.county = updates.county;
+    if (updates.constituency !== undefined) dbUpdates.constituency = updates.constituency;
+    if (updates.areaCode !== undefined) dbUpdates.area_code = updates.areaCode;
+    if (updates.keywords !== undefined) dbUpdates.keywords = updates.keywords;
+    if (updates.serviceType !== undefined) dbUpdates.service_type = updates.serviceType;
+    if (updates.onSite !== undefined) dbUpdates.on_site = updates.onSite;
+    if (updates.charges !== undefined) dbUpdates.charges = updates.charges;
+    if (updates.whatsapp !== undefined) dbUpdates.whatsapp = updates.whatsapp;
+    if (updates.email !== undefined) dbUpdates.email = updates.email;
+    if (updates.logoUrl !== undefined) dbUpdates.logo_url = updates.logoUrl;
+    if (updates.foodCategory !== undefined) dbUpdates.food_category = updates.foodCategory;
+    if (updates.delivery !== undefined) dbUpdates.delivery = updates.delivery;
+    if (updates.priceRange !== undefined) dbUpdates.price_range = updates.priceRange;
+    if (updates.facilityType !== undefined) dbUpdates.facility_type = updates.facilityType;
+    if (updates.available247 !== undefined) dbUpdates.available_247 = updates.available247;
+    if (updates.propertyType !== undefined) dbUpdates.property_type = updates.propertyType;
+    if (updates.listingFor !== undefined) dbUpdates.listing_for = updates.listingFor;
+    if (updates.vehicleType !== undefined) dbUpdates.vehicle_type = updates.vehicleType;
+    if (updates.condition !== undefined) dbUpdates.condition = updates.condition;
+    if (updates.jobType !== undefined) dbUpdates.job_type = updates.jobType;
+    if (updates.employmentType !== undefined) dbUpdates.employment_type = updates.employmentType;
+    if (updates.salary !== undefined) dbUpdates.salary = updates.salary;
+    if (updates.education !== undefined) dbUpdates.education = updates.education;
+    if (updates.experience !== undefined) dbUpdates.experience = updates.experience;
+    if (updates.profilePhoto !== undefined) dbUpdates.profile_photo = updates.profilePhoto;
+    if (updates.cvUrl !== undefined) dbUpdates.cv_url = updates.cvUrl;
+    if (updates.eventCategory !== undefined) dbUpdates.event_category = updates.eventCategory;
+    if (updates.eventDate !== undefined) dbUpdates.event_date = updates.eventDate;
+    if (updates.eventTime !== undefined) dbUpdates.event_time = updates.eventTime;
+    if (updates.venue !== undefined) dbUpdates.venue = updates.venue;
+    if (updates.ticketPrice !== undefined) dbUpdates.ticket_price = updates.ticketPrice;
     if (updates.price !== undefined) dbUpdates.price = updates.price;
     if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
     if (updates.tags !== undefined) dbUpdates.tags = updates.tags;
@@ -540,7 +756,7 @@ const [AppContextProvider, useAppContext] = createContextHook(() => {
       .update(dbUpdates)
       .eq("id", id)
       .eq("user_id", user?.id)
-      .select("*, profiles(*)")
+      .select("*, profiles!listings_user_id_fkey(*), listing_images(url, sort_order)")
       .single();
 
     if (error) throw error;
@@ -591,7 +807,7 @@ const [AppContextProvider, useAppContext] = createContextHook(() => {
         .from("listings")
         .update({ available: !listing.available })
         .eq("id", id)
-        .select("*, profiles(*)")
+        .select("*, profiles!listings_user_id_fkey(*), listing_images(url, sort_order)")
         .single();
 
       if (error) throw error;

@@ -24,7 +24,43 @@ import { ListingCard } from "@/components/ListingCard";
 const HISTORY_KEY = "@mkg:search_history";
 const MAX_HISTORY = 8;
 
-const POPULAR_SEARCHES = ["Plumber", "Electrician", "Jobs Nairobi", "Rooms for rent", "Carpenters", "Lawyers", "Mechanic", "Android developer", "House cleaner", "Tutor"];
+const POPULAR_SEARCHES = ["Plumber", "Electrician", "Jobs Nairobi", "Rooms for rent", "Carpenters", "Lawyers", "Mechanic", "Android developer", "House cleaner", "Tutor", "Surveying", "Cleaning Service", "Law Firm"];
+
+function levenshteinDistance(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
+}
+
+function fuzzyMatch(query: string, target: string): boolean {
+  const q = query.toLowerCase().trim();
+  const t = target.toLowerCase().trim();
+  if (t.includes(q)) return true;
+  if (q.length <= 2) return t.includes(q);
+  const words = t.split(/\s+/);
+  for (const word of words) {
+    if (word.includes(q)) return true;
+    if (q.length >= 3 && word.length >= 3) {
+      const dist = levenshteinDistance(q, word);
+      if (dist <= Math.max(1, Math.floor(q.length / 3))) return true;
+    }
+  }
+  return false;
+}
+
+function fuzzyMatchAny(query: string, targets: string[]): boolean {
+  return targets.some((t) => fuzzyMatch(query, t));
+}
 
 export default function SearchScreen() {
   const insets = useSafeAreaInsets();
@@ -74,11 +110,15 @@ export default function SearchScreen() {
       const catMatch = !selectedCat || l.categoryId === selectedCat;
       const countyMatch = !selectedCounty || l.location.toLowerCase().includes(selectedCounty.toLowerCase());
       const textMatch = !q ||
-        l.title.toLowerCase().includes(q) ||
-        l.subtitle.toLowerCase().includes(q) ||
-        l.description.toLowerCase().includes(q) ||
-        l.location.toLowerCase().includes(q) ||
-        l.tags.some((t) => t.toLowerCase().includes(q));
+        fuzzyMatch(q, l.title) ||
+        fuzzyMatch(q, l.subtitle) ||
+        fuzzyMatch(q, l.description) ||
+        fuzzyMatch(q, l.location) ||
+        fuzzyMatch(q, l.county ?? "") ||
+        fuzzyMatch(q, l.constituency ?? "") ||
+        fuzzyMatch(q, l.areaCode ?? "") ||
+        fuzzyMatchAny(q, l.tags) ||
+        fuzzyMatchAny(q, l.keywords ?? []);
       return catMatch && countyMatch && textMatch;
     });
   }, [query, selectedCat, selectedCounty, listings]);
